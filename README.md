@@ -1,10 +1,8 @@
-Here's a more professional version of your `README.md`:
-
----
-
 # Exoplanet Empire
 
 **ICS3UP Summative: A Text-Based, Idle, Space Expansion Game**
+
+----
 
 ## Overview
 
