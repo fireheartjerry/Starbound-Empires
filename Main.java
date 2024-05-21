@@ -1,6 +1,5 @@
-// File: HSAConsoleFrameRateDemo.java
-
 import hsa.Console;
+import Modules.Savefile;
 
 public class Main {
     static Console c; // HSA Console object
@@ -11,7 +10,6 @@ public class Main {
         c = new Console(); // Initialize the console
         long cookies = 0;
         long increment = 17;
-        long programStartTime = System.currentTimeMillis(); // Record the start time of the program
 
         // Keeping the main thread alive to keep the application running
         while (true) {
