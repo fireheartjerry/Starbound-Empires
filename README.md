@@ -1,4 +1,4 @@
-# Exoplanet Empire
+# Starbound Empires
 
 **ICS3UP Summative: A Text-Based, Idle, Space Expansion Game**
 
