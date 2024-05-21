@@ -2,7 +2,6 @@
 
 import hsa.Console;
 import java.math.BigDecimal;
-import java.math.RoundingMode;
 
 public class Framerate {
     static Console c; // HSA Console object
