@@ -28,7 +28,7 @@ public class Framerate {
             // Calculate the time taken for the frame update
             long timeTaken = System.currentTimeMillis() - frameStartTime;
             BigDecimal cookiesPerSecond = increment.multiply(new BigDecimal(FRAME_RATE));
-            c.print("Cookies: " + cookies + " | Time: " + elapsedTimeSeconds + "s\nYou are producing " + cookiesPerSecond + " cookies per second\n");
+            c.print("Steel: " + cookies + " | Time: " + elapsedTimeSeconds + "s\nYou are producing " + cookiesPerSecond + " steel per second\n");
 
             // Calculate the remaining time to sleep to maintain the frame rate
             long sleepTime = FRAME_PERIOD - timeTaken;
