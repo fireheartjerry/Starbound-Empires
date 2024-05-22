@@ -92,8 +92,10 @@ public class Main {
         c.setCursor(1, 1);
 
         // Output the rules to the user
-        
-
+        c.println("Welcome to Starbound Empires! In this game, you will be tasked with managing a space empire.");
+        c.println("You will have to manage your material resources, human resources, and research to expand your empire.");
+        c.println("You will have to balance your energy and stellar reserves to keep your empire running.");
+        c.println("You will have to manage your population, soldiers, workers, and researchers to keep your empire growing.");
 
         // Keeping the main thread alive to keep the application running
         while (true) {

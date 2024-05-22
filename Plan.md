@@ -13,11 +13,17 @@ Also you have resources:
    - Population passively grows
 ## Progression:
 Planets: Earth, Mars, Asteroid belt, Jupiter, Saturn, Uranus, Oort cloud, Planet 31337, Proxima Centari b
+
 So you start on Earth with one worker and that is all of your population
+
 Then your population grows and etc
+
 Once you have enough stellar reserves, you can conquer Mars, which increases your population cap, allowing you to get more people to get more resources
+
 The solar system planets (excluding the Oort cloud) only require stellar reserves but no soldiers
+
 Then, for the other ones, much more stellar reserves and many soldiers are required to conquer them
+
 Requirement of stellar reserves grows exponentially
 
 # Stats
