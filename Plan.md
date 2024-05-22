@@ -1,9 +1,12 @@
 # Detailed plan for the game
 You will have a bunch of planets that you need to conquer and the objective is to conquer all the planets
+
 Also you have resources:
+  
   Material resources: stellar reserves and energy
    - Energy is used to convert population between the three occupations
    - Stellar reserves is used to capture planets
+  
   Human resources: workers, soldiers, doctors, which come from a pool of population
    - Workers are used to increase the rate of energy and stellar reserves production
    - Soldiers are used for conquering planets and you will randomly lose some soldiers each time you conquer a planet
@@ -35,7 +38,10 @@ Requirement of stellar reserves grows exponentially
 | Soldiers needed         | 0     | 0    | 0             | 0       | 0      | 0      | 100        | 1000         | 2000               |
 ## Professions
 Worker: 5GJ/s (i.e 5GW) + 0.1 stellar reserve/s
+
 Soldier: literally just for conquering planets
+
 Doctors: +0.1 population/s from the base rate of 0.1 population/s
  - population starts out as "unemployed"
+
 It requires 1TJ to switch anyone's occupation
