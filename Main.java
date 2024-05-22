@@ -16,6 +16,11 @@ import java.io.FileInputStream;
 public class Main {
     static Console c; // HSA Console object
 
+    static long stellar_reserves, energy;
+    static long stellar_reserves_production_rate, energy_production_rate, energy_consumption_rate;
+
+    static long population, population_growth_rate, soldiers, workers, researchers;
+
     public static void displayGraphicalText(String message, Font font, Color col, int x, int y) {
         c.setFont(font);
         c.setColor(col);
@@ -34,6 +39,8 @@ public class Main {
     }
 
     public static void displayStartingScreen(Font customFont) {
+        c.clear();
+
         // Include a nice background image
         displayBackgroundImage();
 
@@ -46,6 +53,8 @@ public class Main {
 
         c.getChar();
     }
+
+    
 
     public static void main(String[] args) {
         c = new Console(27, 115, 18, "Starbound Empires"); // Initialize the console
@@ -71,11 +80,16 @@ public class Main {
         }
 
         // Initialize the game variables for material resources. Energy starts in terajoules, and stellar reserves are in tons.
-        long stellar_reserves, energy;
-        long stellar_reserves_production_rate, energy_production_rate, energy_consumption_rate;
+        stellar_reserves = 0;
+        energy = 0;
+
+        stellar_reserves_production_rate, energy_production_rate, energy_consumption_rate;
 
         // Initialize the game variables for the human resources
         long population, population_growth_rate, soldiers, workers, researchers;
+
+        // Initialize some miscellaneous variables
+        String colony_name; // We initialize it to a string of 13 a's to ensure that the user will always have to change it
 
         displayStartingScreen(customFont);
 
@@ -89,17 +103,34 @@ public class Main {
             }
         }
 
-        c.setCursor(1, 1);
+
+        do {
+            c.clear();
+            c.print("What is your colony name (max 30 characters)? ");
+            colony_name = c.readLine();
+        } while (colony_name.length() > 30 && colony_name.length() < 1);
+
+        c.clear();
+        // Output the rules to the user
+        displayGraphicalText(colony_name, customFont.deriveFont(50f), Color.CYAN, 10, 45);
 
         // Output the rules to the user
-        c.println("Welcome to Starbound Empires! In this game, you will be tasked with managing a space empire.");
-        c.println("You will have to manage your material resources, human resources, and research to expand your empire.");
-        c.println("You will have to balance your energy and stellar reserves to keep your empire running.");
-        c.println("You will have to manage your population, soldiers, workers, and researchers to keep your empire growing.");
+        displayGraphicalText("Rules:", new Font("OCR A Extended", Font.BOLD, 30), Color.YELLOW, 10, 100);
+        displayGraphicalText("1. You are the leader of a colony in the Starbound Empires universe residing on Earth.", new Font("Consolas", Font.PLAIN, 20), Color.GREEN, 10, 135);
+        displayGraphicalText("2. You must manage your material resources: stellar reserves and energy.", new Font("Consolas", Font.PLAIN, 20), Color.GREEN, 10, 170);
+        displayGraphicalText("3. You must also manage your human resources: soldiers, workers, and doctors.", new Font("Consolas", Font.PLAIN, 20), Color.GREEN, 10, 205);
+        displayGraphicalText("4. Soldiers will help you conquer new planets.", new Font("Consolas", Font.PLAIN, 20), Color.GREEN, 10, 240);
+        displayGraphicalText("5. Workers will increase your production of material resources.", new Font("Consolas", Font.PLAIN, 20), Color.GREEN, 10, 275);
+        displayGraphicalText("6. Doctors will increase your population growth.", new Font("Consolas", Font.PLAIN, 20), Color.GREEN, 10, 310);
+        displayGraphicalText("7. The game will become more familiar as you play.", new Font("Consolas", Font.PLAIN, 20), Color.GREEN, 10, 345);
+        displayGraphicalText("Press any key to continue...", new Font("OCR A Extended", Font.BOLD, 25), Color.YELLOW, 10, 380);
+
+        c.getChar();
+        c.clear();
 
         // Keeping the main thread alive to keep the application running
         while (true) {
-            // Update the cookies count
+            // Display the hub
 
 
             // Calculate the remaining time to sleep to maintain the frame rate
