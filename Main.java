@@ -43,8 +43,8 @@ public class Main {
         displayGraphicalText("Welcome To", new Font("Consolas", Font.BOLD, 60), Color.GREEN, 445, 80);
         displayGraphicalText("Starbound", customFont.deriveFont(150f), Color.CYAN, 100, 250);
         displayGraphicalText("Empires", customFont.deriveFont(150f), Color.CYAN, 245, 430);
-        displayGraphicalText("Press Any Key to Start the Game", new Font("OCR A Extended", Font.BOLD, 45), Color.YELLOW, 200, 525);
-        displayGraphicalText("Brought to you by Jerry Li and Jerry Chen", new Font("OCR A Extended", Font.PLAIN, 25), Color.GREEN, 325, 600);
+        displayGraphicalText("Press Any Key to Start", new Font("OCR A Extended", Font.BOLD, 45), Color.YELLOW, 310, 525);
+        displayGraphicalText("Brought to you by Jerry Li and Jerry Chen", new Font("OCR A Extended", Font.PLAIN, 25), Color.GREEN, 315, 600);
 
         c.getChar();
     }
