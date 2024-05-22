@@ -33,9 +33,15 @@ Requirement of stellar reserves grows exponentially
 ## Planets
 |                         | Earth | Mars | Asteroid belt | Jupiter | Saturn | Uranus | Oort cloud | Planet 31337 | Proxima centauri b |
 |-------------------------|-------|------|---------------|---------|--------|--------|------------|--------------|--------------------|
-| Population cap          | 10    | 20   | 40            | 80      | 200    | 300    | 1000       | 3000         | 10000              |
-| Stellar reserves needed | 0     | 50   | 150           | 500     | 1000   | 1500   | 10000      | 20000        | 100000             |
-| Soldiers needed         | 0     | 0    | 0             | 0       | 0      | 0      | 100        | 1000         | 2000               |
+| Population cap          | 10    | 20   | 40            | 80      | 200    | 300    | 1 000      | 3 000        | 10 000             |
+| Stellar reserves needed | 0     | 50   | 300           | 1 000   | 5 000  | 9 500  | 50 000     | 100 000      | 500 000            |
+| Soldiers needed         | 0     | 0    | 0             | 0       | 0      | 0      | 500        | 1 000        | 5 000              |
+
+|                         | Ross 128b | Hoth      | Teth      | Gliese x7x | Groza-S   | Agamar     | Wayland    | SR-25      | Awajiba    |
+|-------------------------|-----------|-----------|-----------|------------|-----------|------------|------------|------------|------------|
+| Population cap          | 15 000    | 20 000    | 30 000    | 40 000     | 50 000    | 60 000     | 80 000     | 80 000     | 80 000     |
+| Stellar reserves needed | 1 000 000 | 2 000 000 | 3 000 000 | 4 000 000  | 6 000 000 | 10 000 000 | 20 000 000 | 40 000 000 | 69 420 000 |
+| Soldiers needed         | 10 000    | 12 000    | 20 000    | 25 000     | 33 000    | 40 000     | 55 000     | 60 000     | 65 000     |
 ## Professions
 Worker: 5GJ/s (i.e 5GW) + 0.1 stellar reserve/s
 
