@@ -34,8 +34,6 @@ public class Main {
     }
 
     public static void displayStartingScreen(Font customFont) {
-        c.clear();
-
         // Include a nice background image
         displayBackgroundImage();
 
@@ -90,6 +88,11 @@ public class Main {
                 e.printStackTrace();
             }
         }
+
+        c.setCursor(1, 1);
+
+        // Output the rules to the user
+        
 
 
         // Keeping the main thread alive to keep the application running

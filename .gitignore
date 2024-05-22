@@ -1,3 +1,4 @@
 hsa
 .gitignore
 TestCodeSnake.java
+*.class
