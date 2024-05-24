@@ -1,4 +1,4 @@
-import hsa.*;
+import hsa.Console;
 
 import java.awt.Font;
 import java.awt.Color;
@@ -7,45 +7,49 @@ import java.awt.Image;
 
 import java.io.File;
 import java.io.InputStream;
-
-import javax.imageio.ImageIO;
-
 import java.io.IOException;
 import java.io.FileInputStream;
+
+import javax.imageio.ImageIO;
 
 public class Main {
     static Console c; // HSA Console
 
     // Game variables
-    static long stellar_reserves, energy;
-    static long population, soldiers, workers, doctors, population_capacity;
-    static long seconds_past;
+    static long stellar_reserves, energy, population, soldiers, workers, doctors, population_capacity;
     static String colony_name;
+    static Font customFont;
 
     // Game rates
     static double stellar_reserves_production_rate, energy_production_rate, population_growth_rate, energy_consumption_rate;
 
-    /**
-     * Displays graphical text on the screen.
-     *
-     * @param message the text to be displayed
-     * @param font the font to be used for the text
-     * @param col the color of the text
-     * @param x the x-coordinate of the text's position
-     * @param y the y-coordinate of the text's position
-     */
+    // Mimicking an enum for the game states
+    public static final class GameState {
+        public static final GameState START = new GameState(0);
+        public static final GameState DASHBOARD = new GameState(1);
+        private final int currentState;
+
+        private GameState(int currentState) {
+            this.currentState = currentState;
+        }
+
+        public int state() {
+            return currentState;
+        }
+    }
+
+    // Passively detecting key presses
+    static char currentKeyPressed = 0;
+    static volatile GameState previousGameState, currentGameState;
+    static double seconds_past;
+
     public static void displayGraphicalText(String message, Font font, Color col, int x, int y) {
         c.setFont(font);
         c.setColor(col);
         c.drawString(message, x, y);
     }
 
-    /**
-     * Displays the starting screen of the Starbound Empires game.
-     * 
-     * @param customFont the custom font to be used for displaying text
-     */
-    public static void displayStartingScreen(Font customFont) {
+    public static void displayStartingScreen() {
         c.clear();
 
         // Include a nice background image
@@ -94,12 +98,27 @@ public class Main {
         c.clear();
     }
 
+    public static void setupGameVariables() {
+        // We start with 0 stellar reserves and energy
+        stellar_reserves = 0;
+        energy = 0;
+
+        // We start with 1 population, and just 1 worker
+        population = 1;
+        workers = 1;
+        doctors = 0;
+        soldiers = 0;
+
+        seconds_past = 0f;
+        currentGameState = GameState.START;
+    }
+
     public static void intializeGame() {
         // Set the text color, background color, and font for the console to match our game theme
         c.setTextBackgroundColor(Color.BLACK);
         c.setTextColor(Color.WHITE);
 
-        Font customFont = null;
+        customFont = null;
 
         try {
             String fontPath = "Assets/gamefont.ttf";
@@ -114,7 +133,7 @@ public class Main {
             System.err.println("There was an I/O error when reading the font file. Please ensure that it is a .ttf file in the Assets folder.");
         }
 
-        displayStartingScreen(customFont);
+        displayStartingScreen();
 
         do {
             c.print("What is your colony name (max 30 characters)? ");
@@ -125,34 +144,59 @@ public class Main {
         displayGraphicalText(colony_name, customFont.deriveFont(50f), Color.CYAN, 10, 45);
         displayRules();
         displayGraphicalText(colony_name, customFont.deriveFont(50f), Color.CYAN, 10, 45);
+        setupGameVariables();
 
-        // We start with 0 stellar reserves and energy
-        stellar_reserves = 0;
-        energy = 0;
+        c.setCursor(3, 1);
+    }
 
-        // We start with 1 population, and just 1 worker
-        population = 1;
-        workers = 1;
-        doctors = 0;
-        soldiers = 0;
+    public static void dashboard() {
+        // Only display the hub title if we are not already in the hub
+        if (previousGameState != GameState.DASHBOARD) {
+            c.clear();
+            displayGraphicalText(colony_name, customFont.deriveFont(50f), Color.CYAN, 10, 45);
+            displayGraphicalText("----------------- DASHBOARD -----------------", customFont.deriveFont(35f), Color.GREEN, 10, 85);
+            previousGameState = currentGameState;
+        }
 
-        seconds_past = 0;
+        c.setCursor(6, 1);
+        c.println("Time: ");
+        c.print(seconds_past, 2, 1);
+        c.println(" s\n");
+        c.println("Stellar Reserves: " + stellar_reserves);
+        c.println("Energy: " + energy);
+        c.println("Population: " + population);
+        c.println("Workers: " + workers);
+        c.println("Doctors: " + doctors);
+        c.println("Soldiers: " + soldiers);
+        c.println("Population Capacity: " + population_capacity);
     }
 
     public static void main(String[] args) {
         c = new Console(27, 115, 18, "Starbound Empires"); // Initialize the console
         intializeGame();
 
+        // Thread to capture key presses
+        Thread keyListenerThread = new Thread(() -> {
+            while (true) {
+                currentKeyPressed = c.getChar();
+                if (currentKeyPressed == 'D' || currentKeyPressed == 'd')
+                    currentGameState = GameState.DASHBOARD;
+            }
+        });
+        keyListenerThread.setDaemon(true); // Allow the thread to exit when the program ends
+        keyListenerThread.start();
+
         // Keeping the main thread alive to keep the application running
         while (true) {
-            // Display the hub
-            c.println(seconds_past);
 
-            // Calculate the remaining time to sleep to maintain the frame rate
+            if (currentGameState == GameState.DASHBOARD) {
+                dashboard();
+            }
+
             try {
-                Thread.sleep(1000);
-                seconds_past++;
-                c.setCursor(1, 1);
+                Thread.sleep(100);
+                seconds_past += 0.1;
+                c.setCursor(3, 1);
             } catch (InterruptedException e) {
                 e.printStackTrace();
             }
