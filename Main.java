@@ -11,12 +11,13 @@ import java.io.IOException;
 import java.io.FileInputStream;
 
 import javax.imageio.ImageIO;
+import java.math.BigDecimal;
 
 public class Main {
     static Console c; // HSA Console
 
     // Game variables
-    static long stellar_reserves, energy, population, soldiers, workers, doctors, population_capacity;
+    static long stellar_reserves, energy, population, soldiers, workers, doctors, unemployed, population_capacity, iterations;
     static String colony_name;
     static Font customFont;
 
@@ -25,7 +26,7 @@ public class Main {
 
     // Mimicking an enum for the game states
     public static final class GameState {
-        public static final GameState START = new GameState(0);
+        public static final GameState MAINMENU = new GameState(0);
         public static final GameState DASHBOARD = new GameState(1);
         private final int currentState;
 
@@ -110,7 +111,21 @@ public class Main {
         soldiers = 0;
 
         seconds_past = 0f;
-        currentGameState = GameState.START;
+        iterations = 0;
+        currentGameState = GameState.MAINMENU;
+    }
+
+    public static void updateGameVariables() {
+        stellar_reserves_production_rate = workers * 0.1;
+        energy_production_rate = workers * 5; // gigajoules
+        population_growth_rate = doctors * 0.1;
+
+        if (iterations % 100 == 0) {
+            stellar_reserves += stellar_reserves_production_rate*10;
+            energy += energy_production_rate*10;
+            population += population_growth_rate*10;
+            unemployed = population - workers - doctors - soldiers;
+        }
     }
 
     public static void intializeGame() {
@@ -149,6 +164,18 @@ public class Main {
         c.setCursor(3, 1);
     }
 
+    public static void main_menu() {
+        if (previousGameState != GameState.MAINMENU) {
+            c.clear();
+            displayGraphicalText(colony_name, customFont.deriveFont(50f), Color.CYAN, 10, 45);
+            displayGraphicalText("----------------- MAIN MENU -----------------", customFont.deriveFont(35f), Color.GREEN, 10, 85);
+            previousGameState = currentGameState;
+        }
+
+        c.setCursor(6, 1);
+        c.println("Press D for Dashboard\n");
+    }
+
     public static void dashboard() {
         // Only display the hub title if we are not already in the hub
         if (previousGameState != GameState.DASHBOARD) {
@@ -159,16 +186,6 @@ public class Main {
         }
 
         c.setCursor(6, 1);
-        c.println("Time: ");
-        c.print(seconds_past, 2, 1);
-        c.println(" s\n");
-        c.println("Stellar Reserves: " + stellar_reserves);
-        c.println("Energy: " + energy);
-        c.println("Population: " + population);
-        c.println("Workers: " + workers);
-        c.println("Doctors: " + doctors);
-        c.println("Soldiers: " + soldiers);
-        c.println("Population Capacity: " + population_capacity);
     }
 
     public static void main(String[] args) {
@@ -179,8 +196,6 @@ public class Main {
         Thread keyListenerThread = new Thread(() -> {
             while (true) {
                 currentKeyPressed = c.getChar();
-                if (currentKeyPressed == 'D' || currentKeyPressed == 'd')
-                    currentGameState = GameState.DASHBOARD;
             }
         });
         keyListenerThread.setDaemon(true); // Allow the thread to exit when the program ends
@@ -188,15 +203,38 @@ public class Main {
 
         // Keeping the main thread alive to keep the application running
         while (true) {
+            updateGameVariables();
+            if (currentGameState == GameState.MAINMENU) {
+                main_menu();                
+            }
 
-            if (currentGameState == GameState.DASHBOARD) {
+            else if (currentGameState == GameState.DASHBOARD) {
                 dashboard();
             }
+
+            if (currentKeyPressed == 'D' || currentKeyPressed == 'd')
+                currentGameState = GameState.DASHBOARD;
+
+            c.print("_________________________________________________________\n\nTime: ");
+            c.print(seconds_past, 2, 1);
+            c.println(" s\n");
+
+            c.println("---------- MATERIAL RESOURCES ----------");
+            c.println("Stellar Reserves (megatons): " + stellar_reserves);
+            c.println("Energy (gigajoules): " + energy + "\n");
+
+            c.println("------------ HUMAN RESOURCES -----------");
+            c.println("Population: " + population);
+            c.println("Unemployed: " + unemployed);
+            c.println("Workers: " + workers);
+            c.println("Doctors: " + doctors);
+            c.println("Soldiers: " + soldiers);
+            c.println("Population Capacity: " + population_capacity);
 
             try {
                 Thread.sleep(100);
                 seconds_past += 0.1;
-                c.setCursor(3, 1);
+                ++iterations;
             } catch (InterruptedException e) {
                 e.printStackTrace();
             }
