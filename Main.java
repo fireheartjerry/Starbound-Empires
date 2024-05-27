@@ -11,10 +11,42 @@ import java.io.IOException;
 import java.io.FileInputStream;
 
 import javax.imageio.ImageIO;
-import java.math.BigDecimal;
+import java.lang.Math;
+
+import java.util.List;
+import java.util.ArrayList;
 
 public class Main {
     static Console c; // HSA Console
+
+    /************************ HELPER FUNCTIONS ************************/
+    public static void displayGraphicalText(String message, Font font, Color col, int x, int y) {
+        c.setFont(font);
+        c.setColor(col);
+        c.drawString(message, x, y);
+    }
+
+    public static void displayBackgroundImage() {
+        Image picture = null;
+        try {
+            picture = ImageIO.read(new File("Assets/stars.jpg"));
+        } catch (IOException e) {
+            e.printStackTrace();
+            System.err.println("There was an I/O error when reading the background image file.");
+        }
+        c.drawImage(picture, 0, 0, null);
+    }
+
+    public static String repeat(String s, int n) {
+        String result = "";
+        for (int i = 0; i < n; i++)
+            result += s;
+        return result;
+    }
+
+    public static void printPadRight(String s, int n) {
+        c.print(s + repeat(" ", n - s.length()));
+    }
 
     // Game variables
     static long stellar_reserves, energy, population, soldiers, workers, doctors, unemployed, population_capacity, iterations;
@@ -43,25 +75,13 @@ public class Main {
     static char currentKeyPressed = 0;
     static volatile GameState previousGameState, currentGameState;
     static double seconds_past;
-
-    public static void displayGraphicalText(String message, Font font, Color col, int x, int y) {
-        c.setFont(font);
-        c.setColor(col);
-        c.drawString(message, x, y);
-    }
+    static int maxWidth;
 
     public static void displayStartingScreen() {
         c.clear();
 
         // Include a nice background image
-        Image picture = null;
-        try {
-            picture = ImageIO.read(new File("Assets/stars.jpg"));
-        } catch (IOException e) {
-            e.printStackTrace();
-            System.err.println("There was an I/O error when reading the background image file.");
-        }
-        c.drawImage(picture, 0, 0, null);
+        displayBackgroundImage();
 
         // Write the static messages (they do not require a loop)
         displayGraphicalText("Welcome To", new Font("Consolas", Font.BOLD, 60), Color.GREEN, 445, 80);
@@ -96,7 +116,15 @@ public class Main {
         displayGraphicalText("7. The game will become more familiar as you play.", new Font("Consolas", Font.PLAIN, 20), Color.GREEN, 10, 345);
         displayGraphicalText("Press any key to continue...", new Font("OCR A Extended", Font.BOLD, 25), Color.YELLOW, 10, 380);
         c.getChar();
-        c.clear();
+        for (int i = 0; i < 27; i++) {
+            c.println();
+            try {
+                Thread.sleep(10);
+            } catch (InterruptedException e) {
+                e.printStackTrace();
+            }
+        }
+        c.setCursor(1, 1);
     }
 
     public static void setupGameVariables() {
@@ -156,6 +184,7 @@ public class Main {
             c.clear();
         } while (colony_name.length() > 30 && colony_name.length() < 1);
 
+        displayBackgroundImage();
         displayGraphicalText(colony_name, customFont.deriveFont(50f), Color.CYAN, 10, 45);
         displayRules();
         displayGraphicalText(colony_name, customFont.deriveFont(50f), Color.CYAN, 10, 45);
@@ -192,13 +221,22 @@ public class Main {
         c = new Console(27, 115, 18, "Starbound Empires"); // Initialize the console
         intializeGame();
 
-        // Thread to capture key presses
-        Thread keyListenerThread = new Thread(() -> {
-            while (true) {
-                currentKeyPressed = c.getChar();
+        Runnable keyListenerRunnable = new Runnable() {
+            public void run() {
+                // Replace `c.getChar()` with the appropriate method to get the character
+                while (true) {
+                    currentKeyPressed = c.getChar();
+                }
             }
-        });
-        keyListenerThread.setDaemon(true); // Allow the thread to exit when the program ends
+        };
+
+        // Create a thread with the Runnable
+        Thread keyListenerThread = new Thread(keyListenerRunnable);
+
+        // Allow the thread to exit when the program ends
+        keyListenerThread.setDaemon(true);
+
+        // Start the thread
         keyListenerThread.start();
 
         // Keeping the main thread alive to keep the application running
@@ -219,17 +257,38 @@ public class Main {
             c.print(seconds_past, 2, 1);
             c.println(" s\n");
 
-            c.println("---------- MATERIAL RESOURCES ----------");
-            c.println("Stellar Reserves (megatons): " + stellar_reserves);
-            c.println("Energy (gigajoules): " + energy + "\n");
+            // Calculating max width so we can display better
+            maxWidth = 0;
 
-            c.println("------------ HUMAN RESOURCES -----------");
-            c.println("Population: " + population);
-            c.println("Unemployed: " + unemployed);
-            c.println("Workers: " + workers);
-            c.println("Doctors: " + doctors);
-            c.println("Soldiers: " + soldiers);
-            c.println("Population Capacity: " + population_capacity);
+            List output_lines = new ArrayList();
+
+            output_lines.add("Stellar Reserves (MT): " + stellar_reserves);
+            output_lines.add("Energy (GJ): " + energy);
+            output_lines.add("Population: " + population);
+            output_lines.add("Unemployed: " + unemployed);
+            output_lines.add("Workers: " + workers);
+            output_lines.add("Doctors: " + doctors);
+            output_lines.add("Soldiers: " + soldiers);
+            output_lines.add("Population Capacity: " + population_capacity);
+
+            for (int i = 0; i < output_lines.size(); i++)
+                maxWidth = Math.max(maxWidth, output_lines.get(i).toString().length());
+
+            // Construct the dash string using an algorithm that dynamically adjusts to the max width
+            String dashes = repeat("-", Math.max(5, (maxWidth-20+maxWidth%2)/2)+1);
+
+            c.println("|" + dashes + " MATERIAL RESOURCES " + dashes + "|");
+            for (int i = 0; i < 2; i++) {
+                printPadRight("| " + output_lines.get(i), Math.max(33, maxWidth+3-output_lines.get(i).toString().length()));
+                c.println("|");
+            }
+
+            c.println("|" + dashes + "-- HUMAN RESOURCES -" + dashes + "|");
+            for (int i = 2; i < 8; i++) {
+                printPadRight("| " + output_lines.get(i), Math.max(33, maxWidth+3-output_lines.get(i).toString().length()));
+                c.println("|");                
+            }
+            c.println("|" + repeat("-", Math.max(32, maxWidth+5)) + "|");
 
             try {
                 Thread.sleep(100);
