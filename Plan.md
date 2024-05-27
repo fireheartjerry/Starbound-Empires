@@ -14,6 +14,8 @@ Also you have resources:
    - Doctors increase the rate of population growth
    - There is a population cap and you can expand this cap by capturing more planets
    - Population passively grows
+
+You start at 0 for all the resources except for a singular worker
 ## Progression:
 Planets: Earth, Mars, Asteroid belt, Jupiter, Saturn, Uranus, Oort cloud, Planet 31337, Proxima Centari b
 
@@ -51,3 +53,22 @@ Doctors: +0.1 population/s from the base rate of 0.1 population/s
  - population starts out as "unemployed"
 
 It requires 1TJ to switch anyone's occupation
+
+# GUI deisgn and such
+Start game --> name select and such --> main menu
+
+Main menu has two options to go to the population menu or the planet map
+
+Main menu:
+- Energy and stellar reserves counter
+- Energy per second and population growth rate
+- Population counter and the professions
+
+Population menu:
+- Counter of how many workers, soldiers, doctors and unemployed
+- Prompts you to choose two professions and a number, and converts that many of the first profession into the second profession
+   - this requires energy of course
+
+Planet map:
+- Map of all the planets
+- Prompts the user to enter if they would like to conquer the next planet
