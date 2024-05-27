@@ -75,7 +75,7 @@ public class Main {
     static char currentKeyPressed = 0;
     static volatile GameState previousGameState, currentGameState;
     static double seconds_past;
-    static int maxWidth;
+    static int maxWidth, maxWidth2;
 
     public static void displayStartingScreen() {
         c.clear();
@@ -218,7 +218,7 @@ public class Main {
     }
 
     public static void main(String[] args) {
-        c = new Console(27, 115, 18, "Starbound Empires"); // Initialize the console
+        c = new Console(28, 115, 18, "Starbound Empires"); // Initialize the console
         intializeGame();
 
         Runnable keyListenerRunnable = new Runnable() {
@@ -233,22 +233,18 @@ public class Main {
         // Create a thread with the Runnable
         Thread keyListenerThread = new Thread(keyListenerRunnable);
 
-        // Allow the thread to exit when the program ends
+        // Intialize the thread and set it to be a daemon thread
         keyListenerThread.setDaemon(true);
-
-        // Start the thread
         keyListenerThread.start();
 
         // Keeping the main thread alive to keep the application running
         while (true) {
             updateGameVariables();
-            if (currentGameState == GameState.MAINMENU) {
-                main_menu();                
-            }
+            if (currentGameState == GameState.MAINMENU)
+                main_menu();
 
-            else if (currentGameState == GameState.DASHBOARD) {
+            else if (currentGameState == GameState.DASHBOARD)
                 dashboard();
-            }
 
             if (currentKeyPressed == 'D' || currentKeyPressed == 'd')
                 currentGameState = GameState.DASHBOARD;
@@ -259,39 +255,46 @@ public class Main {
 
             // Calculating max width so we can display better
             maxWidth = 0;
+            maxWidth2 = 0;
 
-            List output_lines = new ArrayList();
+            String material_output_lines[] = {
+                "Stellar Reserves: " + stellar_reserves + " MT",
+                "Energy: " + energy + " GJ",
+                "Population: " + population,
+                "Unemployed: " + unemployed,
+                "Workers: " + workers,
+                "Doctors: " + doctors,
+                "Soldiers: " + soldiers,
+                "Population Capacity: " + population_capacity
+            };
 
-            output_lines.add("Stellar Reserves (MT): " + stellar_reserves);
-            output_lines.add("Energy (GJ): " + energy);
-            output_lines.add("Population: " + population);
-            output_lines.add("Unemployed: " + unemployed);
-            output_lines.add("Workers: " + workers);
-            output_lines.add("Doctors: " + doctors);
-            output_lines.add("Soldiers: " + soldiers);
-            output_lines.add("Population Capacity: " + population_capacity);
+            String rate_output_lines[] = {
+                "Stellar Reserves Production Rate: " + stellar_reserves_production_rate + " MT/s",
+                "Energy Production Rate: " + energy_production_rate + " GJ/s",
+                "Population Growth Rate: " + population_growth_rate + " people/s"
+            };
 
-            for (int i = 0; i < output_lines.size(); i++)
-                maxWidth = Math.max(maxWidth, output_lines.get(i).toString().length());
+            for (int i = 0; i < 8; i++)
+                maxWidth = Math.max(maxWidth, material_output_lines[i].length());
 
             // Construct the dash string using an algorithm that dynamically adjusts to the max width
             String dashes = repeat("-", Math.max(5, (maxWidth-20+maxWidth%2)/2)+1);
 
-            c.println("|" + dashes + " MATERIAL RESOURCES " + dashes + "|");
-            for (int i = 0; i < 2; i++) {
-                printPadRight("| " + output_lines.get(i), Math.max(33, maxWidth+3-output_lines.get(i).toString().length()));
-                c.println("|");
-            }
+            c.println(dashes + " MATERIAL RESOURCES " + dashes);
+            c.println("Stellar Reserves: " + stellar_reserves + " MT");
+            c.println("Energy: " + energy + " GJ\n");
 
-            c.println("|" + dashes + "-- HUMAN RESOURCES -" + dashes + "|");
-            for (int i = 2; i < 8; i++) {
-                printPadRight("| " + output_lines.get(i), Math.max(33, maxWidth+3-output_lines.get(i).toString().length()));
-                c.println("|");                
-            }
-            c.println("|" + repeat("-", Math.max(32, maxWidth+5)) + "|");
+            c.println(dashes + "-- HUMAN RESOURCES -" + dashes);
+            c.println("Population: " + population);
+            c.println("Unemployed: " + unemployed);
+            c.println("Workers: " + workers);
+            c.println("Soldiers: " + soldiers);
+            c.println("Doctors: " + doctors + "\n");
+
+            c.println(dashes + "-- LIMITS & RATES --" + dashes);
 
             try {
-                Thread.sleep(100);
+                Thread.sleep(75);
                 seconds_past += 0.1;
                 ++iterations;
             } catch (InterruptedException e) {
