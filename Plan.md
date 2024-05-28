@@ -54,6 +54,27 @@ Doctors: +0.1 population/s from the base rate of 0.1 population/s
 
 It requires 1TJ to switch anyone's occupation
 
+# Random events and such
+Every time you invade a planet, there is a random chance for a special event to happen
+
+10% chance for each (i.e 20% in total for some special event)
+
+"The alien forces were caught off guard by your military strategy" and then all the amounts needed are reduced by a random amount 10% to 50%
+
+"The alien forces were underestimated and a bloody battle ensued" and then all the amounts needed are increased by a random amount 10% to 50%
+
+
+Also, around every minute (i.e since 10fps, that would be 1/600 chance per frame) there will be an alien gift or attack
+
+The magnitude of each gift or attack will be from 2% to 10% of the stellar reserves needed to conquer the next planet
+
+If you don't have enough stellar reserve then you die
+
+However, there is a 10% chance that a gift, instead of being a regular gift, will be a "pity gift":
+> The aliens, living in their 5D universe, take pity on you by giving you a pity gift of 1 stellar reserve. Sucks to suck.
+
+The faster you conquer planets, the less the chance of gifts and the more the chance of attack
+
 # GUI deisgn and such
 Start game --> name select and such --> main menu
 
