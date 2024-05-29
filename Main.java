@@ -1,18 +1,13 @@
 import hsa.Console;
-
 import java.awt.Font;
 import java.awt.Color;
 import java.awt.FontFormatException;
 import java.awt.Image;
-
 import java.io.File;
 import java.io.InputStream;
 import java.io.IOException;
 import java.io.FileInputStream;
-
 import javax.imageio.ImageIO;
-import java.lang.Math;
-
 import java.util.List;
 import java.util.ArrayList;
 
@@ -37,7 +32,7 @@ public class Main {
         c.drawImage(picture, 0, 0, null);
     }
 
-    public static String repeat(String s, int n) {
+    public static String repeat(String s, long n) {
         String result = "";
         for (int i = 0; i < n; i++)
             result += s;
@@ -60,6 +55,8 @@ public class Main {
     public static final class GameState {
         public static final GameState MAINMENU = new GameState(0);
         public static final GameState DASHBOARD = new GameState(1);
+        public static final GameState POPULATION = new GameState(2);
+        public static final GameState CLEARED_SCREEN = new GameState(3);
         private final int currentState;
 
         private GameState(int currentState) {
@@ -72,10 +69,13 @@ public class Main {
     }
 
     // Passively detecting key presses
-    static char currentKeyPressed = 0;
+    static char currentKeyPressed;
     static volatile GameState previousGameState, currentGameState;
     static double seconds_past;
-    static int maxWidth, maxWidth2;
+    static long maxWidth, maxWidth2, numSwitch, required_energy;
+    static boolean switching, choseFirst, choseSecond, jobInputComplete, workersAvailable, doctorsAvailable, soldiersAvailable;
+    static String firstSwitch, secondSwitch;
+    static Runnable jobSwitchRunnable, keyListenerRunnable;
 
     public static void displayStartingScreen() {
         c.clear();
@@ -93,7 +93,7 @@ public class Main {
         c.getChar();
 
         // Remove the starting screen in a cool way using a for loop and a delay
-        for (int i = 0; i < 27; i++) {
+        for (int i = 0; i < 28; i++) {
             c.println();
             try {
                 Thread.sleep(15);
@@ -106,7 +106,7 @@ public class Main {
     }
 
     public static void displayRules() {
-        displayGraphicalText("Rules:", new Font("OCR A Extended", Font.BOLD, 30), Color.YELLOW, 10, 100);
+        displayGraphicalText("Instructions:", new Font("OCR A Extended", Font.BOLD, 30), Color.YELLOW, 10, 100);
         displayGraphicalText("1. You are the leader of a colony in the Starbound Empires universe. You start on Earth.", new Font("Consolas", Font.PLAIN, 20), Color.GREEN, 10, 135);
         displayGraphicalText("2. You must manage your material resources: stellar reserves and energy.", new Font("Consolas", Font.PLAIN, 20), Color.GREEN, 10, 170);
         displayGraphicalText("3. You must also manage your human resources: soldiers, workers, and doctors.", new Font("Consolas", Font.PLAIN, 20), Color.GREEN, 10, 205);
@@ -116,7 +116,7 @@ public class Main {
         displayGraphicalText("7. The game will become more familiar as you play.", new Font("Consolas", Font.PLAIN, 20), Color.GREEN, 10, 345);
         displayGraphicalText("Press any key to continue...", new Font("OCR A Extended", Font.BOLD, 25), Color.YELLOW, 10, 380);
         c.getChar();
-        for (int i = 0; i < 27; i++) {
+        for (int i = 0; i < 28; i++) {
             c.println();
             try {
                 Thread.sleep(10);
@@ -141,19 +141,33 @@ public class Main {
         seconds_past = 0f;
         iterations = 0;
         currentGameState = GameState.MAINMENU;
+        previousGameState = GameState.CLEARED_SCREEN;
+        switching = false;
+        choseFirst = false;
+        choseSecond = false;
+
+        firstSwitch = "";
+        secondSwitch = "";
+        currentKeyPressed = 0;
+        jobInputComplete = false;
+
+        workersAvailable = false;
+        doctorsAvailable = false;
+        soldiersAvailable = false;
     }
 
     public static void updateGameVariables() {
         stellar_reserves_production_rate = workers * 0.1;
-        energy_production_rate = workers * 5; // gigajoules
-        population_growth_rate = doctors * 0.1;
+        energy_production_rate = workers * 10; // gigajoules
+        population_growth_rate = doctors * 0.1 + 0.1; // people per second
 
         if (iterations % 100 == 0) {
             stellar_reserves += stellar_reserves_production_rate*10;
-            energy += energy_production_rate*10;
             population += population_growth_rate*10;
             unemployed = population - workers - doctors - soldiers;
         }
+
+        energy += energy_production_rate / 10;
     }
 
     public static void intializeGame() {
@@ -182,7 +196,7 @@ public class Main {
             c.print("What is your colony name (max 30 characters)? ");
             colony_name = c.readLine();
             c.clear();
-        } while (colony_name.length() > 30 && colony_name.length() < 1);
+        } while (colony_name.length() > 30 || colony_name.length() < 1);
 
         displayBackgroundImage();
         displayGraphicalText(colony_name, customFont.deriveFont(50f), Color.CYAN, 10, 45);
@@ -190,111 +204,205 @@ public class Main {
         displayGraphicalText(colony_name, customFont.deriveFont(50f), Color.CYAN, 10, 45);
         setupGameVariables();
 
-        c.setCursor(3, 1);
+        c.setCursor(6, 1);
+    }
+
+    public static void updateGameStates() {
+        if ((currentKeyPressed == 'M' || currentKeyPressed == 'm') && currentGameState != GameState.MAINMENU)
+            currentGameState = GameState.MAINMENU;
+
+        else if ((currentKeyPressed == 'D' || currentKeyPressed == 'd') && currentGameState != GameState.DASHBOARD)
+            currentGameState = GameState.DASHBOARD;
+
+        else if ((currentKeyPressed == 'P' || currentKeyPressed == 'p') && currentGameState != GameState.POPULATION)
+            currentGameState = GameState.POPULATION;
+    }
+
+    public static void callGameStates() {
+        if (currentGameState == GameState.CLEARED_SCREEN) {
+            c.clear();
+            currentGameState = previousGameState;
+            previousGameState = GameState.CLEARED_SCREEN;
+        }
+
+        if (currentGameState == GameState.MAINMENU) {
+            if (currentGameState != previousGameState || previousGameState == GameState.CLEARED_SCREEN) {
+                c.clear();
+                displayGraphicalText(colony_name, customFont.deriveFont(50f), Color.CYAN, 10, 45);
+                displayGraphicalText("----------------- MAIN MENU -----------------", customFont.deriveFont(35f), Color.GREEN, 10, 85);
+                previousGameState = currentGameState;
+                currentGameState = GameState.MAINMENU;
+            }
+
+            main_menu();
+        }
+
+        else if (currentGameState == GameState.DASHBOARD) {
+            if (currentGameState != previousGameState || previousGameState == GameState.CLEARED_SCREEN) {
+                c.clear();
+                displayGraphicalText(colony_name, customFont.deriveFont(50f), Color.CYAN, 10, 45);
+                displayGraphicalText("----------------- DASHBOARD -----------------", customFont.deriveFont(35f), Color.GREEN, 10, 85);
+                previousGameState = currentGameState;
+                currentGameState = GameState.DASHBOARD;
+            }
+
+            dashboard();
+        }
+
+        else if (currentGameState == GameState.POPULATION) {
+            if (currentGameState != previousGameState || previousGameState == GameState.CLEARED_SCREEN) {
+                c.clear();
+                displayGraphicalText(colony_name, customFont.deriveFont(50f), Color.CYAN, 10, 45);
+                displayGraphicalText("----------------- POPULATION -----------------", customFont.deriveFont(35f), Color.GREEN, 10, 85);
+                previousGameState = currentGameState;
+                currentGameState = GameState.POPULATION;
+            }
+    
+            population();
+        }
     }
 
     public static void main_menu() {
-        if (previousGameState != GameState.MAINMENU) {
-            c.clear();
-            displayGraphicalText(colony_name, customFont.deriveFont(50f), Color.CYAN, 10, 45);
-            displayGraphicalText("----------------- MAIN MENU -----------------", customFont.deriveFont(35f), Color.GREEN, 10, 85);
-            previousGameState = currentGameState;
-        }
+        c.setCursor(5, 1);
+        c.println("Press D for Dashboard");
+        c.println("Press P for Population Management");
 
-        c.setCursor(6, 1);
-        c.println("Press D for Dashboard\n");
+        c.println();
+        displayValues();
     }
 
     public static void dashboard() {
-        // Only display the hub title if we are not already in the hub
-        if (previousGameState != GameState.DASHBOARD) {
-            c.clear();
-            displayGraphicalText(colony_name, customFont.deriveFont(50f), Color.CYAN, 10, 45);
-            displayGraphicalText("----------------- DASHBOARD -----------------", customFont.deriveFont(35f), Color.GREEN, 10, 85);
-            previousGameState = currentGameState;
-        }
+        c.setCursor(5, 1);
+        displayValues();
+    }
 
-        c.setCursor(6, 1);
+    public static void population() {
+        c.setCursor(5, 1);
+
+        if (currentKeyPressed == 'U' || currentKeyPressed == 'u')
+            switching = true;
+
+        c.println("Population: " + population);
+        c.println("Unemployed: " + unemployed);
+        c.println("Workers: " + workers);
+        c.println("Doctors: " + doctors);
+        c.println("Soldiers: " + soldiers);
+        c.println();
+        if (switching) {
+            if (!choseFirst) {
+                c.println("Choose a profession to switch from:");
+                c.println("Press 1 for Workers");
+                c.println("Press 2 for Doctors");
+                c.println("Press 3 for Soldiers");
+                c.println("Press 4 to cancel");
+                if (currentKeyPressed == '1') {
+                    firstSwitch = "Workers";
+                    choseFirst = true;
+                } else if (currentKeyPressed == '2') {
+                    firstSwitch = "Doctors";
+                    choseFirst = true;
+                } else if (currentKeyPressed == '3') {
+                    firstSwitch = "Soldiers";
+                    choseFirst = true;
+                } else if (currentKeyPressed == '4')
+                    switching = false;
+                currentKeyPressed = 0;
+            } else if (!choseSecond) {
+                c.println("Choose a profession to switch to (you're switching from \'" + firstSwitch +"\'):");
+                c.println("Press 1 for Workers");
+                c.println("Press 2 for Doctors");
+                c.println("Press 3 for Soldiers");
+                c.println("Press 4 to cancel");
+                if (currentKeyPressed == '4')
+                    switching = false;
+                else if (currentKeyPressed == '1' || currentKeyPressed == '2' || currentKeyPressed == '3') {
+                    if (firstSwitch.equals("Workers")) {
+                        if (currentKeyPressed == '2')
+                            secondSwitch = "Doctors";
+                        else if (currentKeyPressed == '3')
+                            secondSwitch = "Soldiers";
+                    } else if (firstSwitch.equals("Doctors")) {
+                        if (currentKeyPressed == '1')
+                            secondSwitch = "Workers";
+                        else if (currentKeyPressed == '3')
+                            secondSwitch = "Soldiers";
+                    } else if (firstSwitch.equals("Soldiers")) {
+                        if (currentKeyPressed == '1')
+                            secondSwitch = "Workers";
+                        else if (currentKeyPressed == '2')
+                            secondSwitch = "Doctors";
+                    } choseSecond = true;
+                    currentGameState = GameState.CLEARED_SCREEN;
+                    previousGameState = GameState.POPULATION;
+                }
+            } else {
+                c.println("Enter the number of people to switch: ");
+                numSwitch = c.readLong();
+                required_energy = numSwitch * 1000;
+            }
+        } else
+            c.println("Press U to switch professions (1 TJ/switch)");
+    }
+
+    public static void displayValues() {
+        // Calculating max width so we can display better
+        maxWidth = 0;
+
+        String output_lines[] = {
+            "Stellar Reserves: " + stellar_reserves + " MT",
+            "Energy: " + energy + " GJ",
+            "Population: " + population,
+            "Unemployed: " + unemployed,
+            "Workers: " + workers,
+            "Doctors: " + doctors,
+            "Soldiers: " + soldiers,
+            "Population Capacity: " + population_capacity,
+            "Stellar Reserves Production Rate: " + stellar_reserves_production_rate + " MT/s",
+            "Energy Production Rate: " + energy_production_rate + " GJ/s",
+            "Population Growth Rate: " + population_growth_rate + " people/s"
+        };
+
+        for (String line : output_lines)
+            maxWidth = Math.max(maxWidth, line.length());
+
+        // Construct the dash string using an algorithm that dynamically adjusts to the max width
+        String dashes = repeat("-", Math.max(5, (maxWidth-20+maxWidth%2)/2)+1);
+
+        c.println(dashes + " MATERIAL RESOURCES " + dashes);
+        c.println("Stellar Reserves: " + stellar_reserves + " MT");
+        c.println("Energy: " + energy + " GJ\n");
+
+        c.println(dashes + "-- HUMAN RESOURCES -" + dashes);
+        c.println("Population: " + population);
+        c.println("Unemployed: " + unemployed);
+        c.println("Workers: " + workers);
+        c.println("Soldiers: " + soldiers);
+        c.println("Doctors: " + doctors + "\n");
+
+        c.println(dashes + "-- LIMITS & RATES --" + dashes);
+        c.println("Population Capacity: " + population_capacity);
+        c.println("Stellar Reserves Production Rate: " + stellar_reserves_production_rate + " MT/s");
+        c.println("Energy Production Rate: " + energy_production_rate + " GJ/s");
+
+        c.print("_________________________________________________________\n\nTime: ");
+        c.print(seconds_past, 2, 1);
+        c.println(" s\n");
     }
 
     public static void main(String[] args) {
         c = new Console(28, 115, 18, "Starbound Empires"); // Initialize the console
         intializeGame();
 
-        Runnable keyListenerRunnable = new Runnable() {
-            public void run() {
-                // Replace `c.getChar()` with the appropriate method to get the character
-                while (true) {
-                    currentKeyPressed = c.getChar();
-                }
-            }
-        };
-
-        // Create a thread with the Runnable
-        Thread keyListenerThread = new Thread(keyListenerRunnable);
-
-        // Intialize the thread and set it to be a daemon thread
-        keyListenerThread.setDaemon(true);
-        keyListenerThread.start();
-
         // Keeping the main thread alive to keep the application running
         while (true) {
+            if (c.isCharAvail())
+                currentKeyPressed = c.getChar();
             updateGameVariables();
-            if (currentGameState == GameState.MAINMENU)
-                main_menu();
-
-            else if (currentGameState == GameState.DASHBOARD)
-                dashboard();
-
-            if (currentKeyPressed == 'D' || currentKeyPressed == 'd')
-                currentGameState = GameState.DASHBOARD;
-
-            c.print("_________________________________________________________\n\nTime: ");
-            c.print(seconds_past, 2, 1);
-            c.println(" s\n");
-
-            // Calculating max width so we can display better
-            maxWidth = 0;
-            maxWidth2 = 0;
-
-            String material_output_lines[] = {
-                "Stellar Reserves: " + stellar_reserves + " MT",
-                "Energy: " + energy + " GJ",
-                "Population: " + population,
-                "Unemployed: " + unemployed,
-                "Workers: " + workers,
-                "Doctors: " + doctors,
-                "Soldiers: " + soldiers,
-                "Population Capacity: " + population_capacity
-            };
-
-            String rate_output_lines[] = {
-                "Stellar Reserves Production Rate: " + stellar_reserves_production_rate + " MT/s",
-                "Energy Production Rate: " + energy_production_rate + " GJ/s",
-                "Population Growth Rate: " + population_growth_rate + " people/s"
-            };
-
-            for (int i = 0; i < 8; i++)
-                maxWidth = Math.max(maxWidth, material_output_lines[i].length());
-
-            // Construct the dash string using an algorithm that dynamically adjusts to the max width
-            String dashes = repeat("-", Math.max(5, (maxWidth-20+maxWidth%2)/2)+1);
-
-            c.println(dashes + " MATERIAL RESOURCES " + dashes);
-            c.println("Stellar Reserves: " + stellar_reserves + " MT");
-            c.println("Energy: " + energy + " GJ\n");
-
-            c.println(dashes + "-- HUMAN RESOURCES -" + dashes);
-            c.println("Population: " + population);
-            c.println("Unemployed: " + unemployed);
-            c.println("Workers: " + workers);
-            c.println("Soldiers: " + soldiers);
-            c.println("Doctors: " + doctors + "\n");
-
-            c.println(dashes + "-- LIMITS & RATES --" + dashes);
+            updateGameStates();
+            callGameStates();
 
             try {
-                Thread.sleep(75);
+                Thread.sleep(80);
                 seconds_past += 0.1;
                 ++iterations;
             } catch (InterruptedException e) {
