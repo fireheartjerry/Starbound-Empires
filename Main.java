@@ -44,7 +44,7 @@ public class Main {
     }
 
     // Game variables
-    static long stellar_reserves, energy, population, soldiers, workers, doctors, unemployed, population_capacity, iterations;
+    static long stellar_reserves, energy, population, soldiers, workers, doctors, unemployed, population_capacity, iterations, required_energy, number_of_people;
     static String colony_name;
     static Font customFont;
 
@@ -72,10 +72,11 @@ public class Main {
     static char currentKeyPressed;
     static volatile GameState previousGameState, currentGameState;
     static double seconds_past;
-    static long maxWidth, maxWidth2, numSwitch, required_energy;
+    static long maxWidth, maxWidth2, numSwitch;
     static boolean switching, choseFirst, choseSecond, jobInputComplete, workersAvailable, doctorsAvailable, soldiersAvailable;
     static String firstSwitch, secondSwitch;
     static Runnable jobSwitchRunnable, keyListenerRunnable;
+    static String[] professions = {"Unemployed", "Workers", "Doctors", "Soldiers"};
 
     public static void displayStartingScreen() {
         c.clear();
@@ -134,6 +135,7 @@ public class Main {
 
         // We start with 1 population, and just 1 worker
         population = 1;
+        unemployed = 0;
         workers = 1;
         doctors = 0;
         soldiers = 0;
@@ -146,8 +148,6 @@ public class Main {
         choseFirst = false;
         choseSecond = false;
 
-        firstSwitch = "";
-        secondSwitch = "";
         currentKeyPressed = 0;
         jobInputComplete = false;
 
@@ -291,22 +291,24 @@ public class Main {
         if (switching) {
             if (!choseFirst) {
                 c.println("Choose a profession to switch from:");
-                c.println("Press 1 for Workers");
-                c.println("Press 2 for Doctors");
-                c.println("Press 3 for Soldiers");
-                c.println("Press 4 to cancel");
-                if (currentKeyPressed == '1') {
-                    firstSwitch = "Workers";
+                c.println("Press 1 for Unemployed");
+                c.println("Press 2 for Workers");
+                c.println("Press 3 for Doctors");
+                c.println("Press 4 for Soldiers");
+                c.println("Press 5 to cancel");
+                if (currentKeyPressed == '1' || currentKeyPressed == '2' || currentKeyPressed == '3' || currentKeyPressed == '4') {
+                    firstSwitch = professions[currentKeyPressed-'0'-1];
                     choseFirst = true;
-                } else if (currentKeyPressed == '2') {
-                    firstSwitch = "Doctors";
-                    choseFirst = true;
-                } else if (currentKeyPressed == '3') {
-                    firstSwitch = "Soldiers";
-                    choseFirst = true;
-                } else if (currentKeyPressed == '4')
+                } else if (currentKeyPressed == '5') {
                     switching = false;
-                currentKeyPressed = 0;
+                    choseFirst = false;
+                    choseSecond = false;
+                    currentGameState = GameState.CLEARED_SCREEN;
+                    previousGameState = GameState.POPULATION;
+                } else {
+                    c.println("Invalid input. Please try again.");
+                    currentKeyPressed = 0;
+                }
             } else if (!choseSecond) {
                 c.println("Choose a profession to switch to (you're switching from \'" + firstSwitch +"\'):");
                 c.println("Press 1 for Workers");
@@ -316,29 +318,92 @@ public class Main {
                 if (currentKeyPressed == '4')
                     switching = false;
                 else if (currentKeyPressed == '1' || currentKeyPressed == '2' || currentKeyPressed == '3') {
-                    if (firstSwitch.equals("Workers")) {
-                        if (currentKeyPressed == '2')
-                            secondSwitch = "Doctors";
-                        else if (currentKeyPressed == '3')
-                            secondSwitch = "Soldiers";
-                    } else if (firstSwitch.equals("Doctors")) {
-                        if (currentKeyPressed == '1')
-                            secondSwitch = "Workers";
-                        else if (currentKeyPressed == '3')
-                            secondSwitch = "Soldiers";
-                    } else if (firstSwitch.equals("Soldiers")) {
-                        if (currentKeyPressed == '1')
-                            secondSwitch = "Workers";
-                        else if (currentKeyPressed == '2')
-                            secondSwitch = "Doctors";
-                    } choseSecond = true;
-                    currentGameState = GameState.CLEARED_SCREEN;
-                    previousGameState = GameState.POPULATION;
+                    secondSwitch = professions[currentKeyPressed-'0'];
+                    if (secondSwitch.equals(firstSwitch)) {
+                        c.println("You cannot switch to the same profession.");
+                        currentKeyPressed = 0;
+                    } else {
+                        choseSecond = true;
+                        currentGameState = GameState.CLEARED_SCREEN;
+                        previousGameState = GameState.POPULATION;
+                    }
+                } else {
+                    c.println("Invalid input. Please try again.");
+                    currentKeyPressed = 0;
                 }
             } else {
                 c.println("Enter the number of people to switch: ");
                 numSwitch = c.readLong();
                 required_energy = numSwitch * 1000;
+                if (firstSwitch.equals("Workers"))
+                    number_of_people = workers;
+                else if (firstSwitch.equals("Doctors"))
+                    number_of_people = doctors;
+                else if (firstSwitch.equals("Soldiers"))
+                    number_of_people = soldiers;
+                else if (firstSwitch.equals("Unemployed"))
+                    number_of_people = unemployed;
+                if (required_energy > energy) {
+                    c.println("You do not have enough energy to switch " + numSwitch + " people.");
+                    switching = false;
+                    choseFirst = false;
+                    choseSecond = false;
+                    currentGameState = GameState.CLEARED_SCREEN;
+                    previousGameState = GameState.POPULATION;
+                } else if (numSwitch > number_of_people) {
+                    c.println(numSwitch + " is more than the number of " + firstSwitch + " you have.");
+                    switching = false;
+                    choseFirst = false;
+                    choseSecond = false;
+                    currentGameState = GameState.CLEARED_SCREEN;
+                    previousGameState = GameState.POPULATION;
+                } else {
+                    if (firstSwitch.equals("Workers")) {
+                        if (secondSwitch.equals("Doctors")) {
+                            workers -= numSwitch;
+                            doctors += numSwitch;
+                        } else if (secondSwitch.equals("Soldiers")) {
+                            workers -= numSwitch;
+                            soldiers += numSwitch;
+                        } else if (secondSwitch.equals("Unemployed")) {
+                            workers -= numSwitch;
+                            unemployed += numSwitch;
+                        }
+                    } else if (firstSwitch.equals("Doctors")) {
+                        if (secondSwitch.equals("Workers")) {
+                            doctors -= numSwitch;
+                            workers += numSwitch;
+                        } else if (secondSwitch.equals("Soldiers")) {
+                            doctors -= numSwitch;
+                            soldiers += numSwitch;
+                        } else if (secondSwitch.equals("Unemployed")) {
+                            doctors -= numSwitch;
+                            unemployed += numSwitch;
+                        }
+                    } else if (firstSwitch.equals("Soldiers")) {
+                        if (secondSwitch.equals("Workers")) {
+                            soldiers -= numSwitch;
+                            workers += numSwitch;
+                        } else if (secondSwitch.equals("Doctors")) {
+                            soldiers -= numSwitch;
+                            doctors += numSwitch;
+                        } else if (secondSwitch.equals("Unemployed")) {
+                            soldiers -= numSwitch;
+                            unemployed += numSwitch;
+                        }
+                    } else if (firstSwitch.equals("Unemployed")) {
+                        if (secondSwitch.equals("Workers")) {
+                            unemployed -= numSwitch;
+                            workers += numSwitch;
+                        } else if (secondSwitch.equals("Doctors")) {
+                            unemployed -= numSwitch;
+                            doctors += numSwitch;
+                        } else if (secondSwitch.equals("Soldiers")) {
+                            unemployed -= numSwitch;
+                            soldiers += numSwitch;
+                        }
+                    }
+                }
             }
         } else
             c.println("Press U to switch professions (1 TJ/switch)");
@@ -362,8 +427,8 @@ public class Main {
             "Population Growth Rate: " + population_growth_rate + " people/s"
         };
 
-        for (String line : output_lines)
-            maxWidth = Math.max(maxWidth, line.length());
+        for (int i = 0; i < output_lines.length; i++)
+            maxWidth = Math.max(maxWidth, output_lines[i].length());
 
         // Construct the dash string using an algorithm that dynamically adjusts to the max width
         String dashes = repeat("-", Math.max(5, (maxWidth-20+maxWidth%2)/2)+1);
