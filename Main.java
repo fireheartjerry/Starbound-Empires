@@ -72,7 +72,7 @@ public class Main {
     static char currentKeyPressed;
     static volatile GameState previousGameState, currentGameState;
     static double seconds_past;
-    static long maxWidth, maxWidth2, numSwitch;
+    static long maxWidth, maxWidth2, numSwitch, switchCost;
     static boolean switching, choseFirst, choseSecond, jobInputComplete, workersAvailable, doctorsAvailable, soldiersAvailable;
     static String firstSwitch, secondSwitch;
     static Runnable jobSwitchRunnable, keyListenerRunnable;
@@ -131,7 +131,7 @@ public class Main {
     public static void setupGameVariables() {
         // We start with 0 stellar reserves and energy
         stellar_reserves = 0;
-        energy = 0;
+        energy = 100;
 
         // We start with 1 population, and just 1 worker
         population = 1;
@@ -139,6 +139,7 @@ public class Main {
         workers = 1;
         doctors = 0;
         soldiers = 0;
+        population_capacity = 10;
 
         seconds_past = 0f;
         iterations = 0;
@@ -147,6 +148,7 @@ public class Main {
         switching = false;
         choseFirst = false;
         choseSecond = false;
+        switchCost = 600;
 
         currentKeyPressed = 0;
         jobInputComplete = false;
@@ -163,7 +165,8 @@ public class Main {
 
         if (iterations % 100 == 0) {
             stellar_reserves += stellar_reserves_production_rate*10;
-            population += population_growth_rate*10;
+            if (population <= population_capacity)
+                population += population_growth_rate*10;
             unemployed = population - workers - doctors - soldiers;
         }
 
@@ -253,7 +256,7 @@ public class Main {
             if (currentGameState != previousGameState || previousGameState == GameState.CLEARED_SCREEN) {
                 c.clear();
                 displayGraphicalText(colony_name, customFont.deriveFont(50f), Color.CYAN, 10, 45);
-                displayGraphicalText("----------------- POPULATION -----------------", customFont.deriveFont(35f), Color.GREEN, 10, 85);
+                displayGraphicalText("----------------- POPULATION MANAGER -----------------", customFont.deriveFont(35f), Color.GREEN, 10, 85);
                 previousGameState = currentGameState;
                 currentGameState = GameState.POPULATION;
             }
@@ -279,15 +282,26 @@ public class Main {
     public static void population() {
         c.setCursor(5, 1);
 
-        if (currentKeyPressed == 'U' || currentKeyPressed == 'u')
+        if (currentKeyPressed == 'U' || currentKeyPressed == 'u') {
             switching = true;
+            currentKeyPressed = 0;
+        }
+        // Print descriptoin
+        c.println("You can switch professions to better manage your colony. Each switch costs " + switchCost + " GJ/person switched. You can switch between Workers, Doctors, Soldiers, and Unemployed. Workers produce energy, doctors increase population growth, and soldiers help conquer new planets.\n");
+        
+        c.print("Time: ");
+        c.print(seconds_past, 2, 1);
+        c.println(" s");
+        c.println("Energy: " + energy + " GJ");
+        c.println("Energy Production Rate: " + energy_production_rate + " GJ/s\n");
 
         c.println("Population: " + population);
         c.println("Unemployed: " + unemployed);
         c.println("Workers: " + workers);
         c.println("Doctors: " + doctors);
         c.println("Soldiers: " + soldiers);
-        c.println();
+        c.println("\nPopulation Capacity: " + population_capacity);
+        c.println("Population Growth Rate: " + population_growth_rate + " people/s\n");
         if (switching) {
             if (!choseFirst) {
                 c.println("Choose a profession to switch from:");
@@ -298,14 +312,17 @@ public class Main {
                 c.println("Press 5 to cancel");
                 if (currentKeyPressed == '1' || currentKeyPressed == '2' || currentKeyPressed == '3' || currentKeyPressed == '4') {
                     firstSwitch = professions[currentKeyPressed-'0'-1];
+                    currentKeyPressed = 0;
                     choseFirst = true;
+                    currentGameState = GameState.CLEARED_SCREEN;
+                    previousGameState = GameState.POPULATION;
                 } else if (currentKeyPressed == '5') {
                     switching = false;
                     choseFirst = false;
                     choseSecond = false;
                     currentGameState = GameState.CLEARED_SCREEN;
                     previousGameState = GameState.POPULATION;
-                } else {
+                } else if (currentKeyPressed != 0) {
                     c.println("Invalid input. Please try again.");
                     currentKeyPressed = 0;
                 }
@@ -327,14 +344,20 @@ public class Main {
                         currentGameState = GameState.CLEARED_SCREEN;
                         previousGameState = GameState.POPULATION;
                     }
-                } else {
+                } else if (currentKeyPressed == '4') {
+                    switching = false;
+                    choseFirst = false;
+                    choseSecond = false;
+                    currentGameState = GameState.CLEARED_SCREEN;
+                    previousGameState = GameState.POPULATION;
+                } else if (currentKeyPressed != 0) {
                     c.println("Invalid input. Please try again.");
                     currentKeyPressed = 0;
                 }
             } else {
-                c.println("Enter the number of people to switch: ");
+                c.print("Enter the number of people to switch: ");
                 numSwitch = c.readLong();
-                required_energy = numSwitch * 1000;
+                required_energy = numSwitch * switchCost;
                 if (firstSwitch.equals("Workers"))
                     number_of_people = workers;
                 else if (firstSwitch.equals("Doctors"))
@@ -344,7 +367,8 @@ public class Main {
                 else if (firstSwitch.equals("Unemployed"))
                     number_of_people = unemployed;
                 if (required_energy > energy) {
-                    c.println("You do not have enough energy to switch " + numSwitch + " people.");
+                    c.println("You do not have enough energy to switch " + numSwitch + " people. Press any key to continue.");
+                    c.getChar();
                     switching = false;
                     choseFirst = false;
                     choseSecond = false;
@@ -402,11 +426,19 @@ public class Main {
                             unemployed -= numSwitch;
                             soldiers += numSwitch;
                         }
-                    }
+                    } energy -= required_energy;
+                    c.println("Successfully switched " + numSwitch + " " + firstSwitch + " to " + secondSwitch + ". Press any key to continue.");
+                    c.getChar();
+                    switching = false;
+                    choseFirst = false;
+                    choseSecond = false;
+                    currentGameState = GameState.CLEARED_SCREEN;
+                    previousGameState = GameState.POPULATION;
+                    switchCost = (int) ((double) switchCost * (1 + 0.15 * numSwitch));
                 }
             }
         } else
-            c.println("Press U to switch professions (1 TJ/switch)");
+            c.println("Press U to switch professions (" + switchCost + " GJ/person switched)");
     }
 
     public static void displayValues() {
@@ -448,6 +480,7 @@ public class Main {
         c.println("Population Capacity: " + population_capacity);
         c.println("Stellar Reserves Production Rate: " + stellar_reserves_production_rate + " MT/s");
         c.println("Energy Production Rate: " + energy_production_rate + " GJ/s");
+        c.println("Population Growth Rate: " + population_growth_rate + " people/s");
 
         c.print("_________________________________________________________\n\nTime: ");
         c.print(seconds_past, 2, 1);
@@ -455,7 +488,7 @@ public class Main {
     }
 
     public static void main(String[] args) {
-        c = new Console(28, 115, 18, "Starbound Empires"); // Initialize the console
+        c = new Console(29, 115, 18, "Starbound Empires"); // Initialize the console
         intializeGame();
 
         // Keeping the main thread alive to keep the application running
