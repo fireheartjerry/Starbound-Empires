@@ -109,7 +109,7 @@ public class Main {
     static char currentKeyPressed;
     static volatile GameState previousGameState, currentGameState;
     static double seconds_past;
-    static long maxWidth, maxWidth2, numSwitch, switchCost;
+    static long maxWidth, maxWidth2, numSwitch, switchCost, newSwitchCost;
     static boolean switching, choseFirst, choseSecond, jobInputComplete, workersAvailable, doctorsAvailable, soldiersAvailable;
     static String firstSwitch, secondSwitch;
     static Runnable jobSwitchRunnable, keyListenerRunnable;
@@ -420,7 +420,9 @@ public class Main {
                     c.println("Invalid input. Please try again.");
                     currentKeyPressed = 0;
                 }
-            } else if (!choseSecond) {
+            }
+            
+            else if (!choseSecond) {
                 c.println("Choose a profession to switch to (you're switching from \'" + firstSwitch +"\'):");
                 c.println("Press 1 for Workers");
                 c.println("Press 2 for Doctors");
@@ -454,11 +456,12 @@ public class Main {
                 c.print("Enter the number of people to switch: ");
                 numSwitch = c.readLong();
                 required_energy = 0;
+                newSwitchCost = switchCost;
 
                 // Calculate the required energy, and update the switch cost due to exponential growth
                 for (int i = 0; i < numSwitch; ++i) {
-                    required_energy += switchCost;
-                    switchCost = (int) ((double) switchCost * 1.25);
+                    required_energy += newSwitchCost;
+                    newSwitchCost = (int) ((double) newSwitchCost * 1.25);
                 }
                 
                 if (firstSwitch.equals("Workers"))
@@ -546,6 +549,7 @@ public class Main {
                     choseSecond = false;
                     currentGameState = GameState.CLEARED_SCREEN;
                     previousGameState = GameState.POPULATION;
+                    switchCost = newSwitchCost;
                 }
             }
         }
@@ -561,6 +565,9 @@ public class Main {
         c.println("Current Planet: " + regions[current_region].name);
         c.println("Population Capacity: " + regions[current_region].population_capacity + "\n");
 
+        c.println("Stellar Reserves: " + stellar_reserves + " MT");
+        c.println("Soldiers: " + soldiers + "\n");
+
         if (current_region < 17) {
             Region next_region = regions[current_region+1];
             c.println("Next Planet: " + next_region.name);
@@ -570,7 +577,7 @@ public class Main {
             if (stellar_reserves >= next_region.required_stellar_reserves && soldiers >= next_region.soldiers_needed) {
                 c.println("You have enough resources to conquer the next planet. Press B to begin conquering " + next_region.name + ".");
             } else {
-                c.println("You need " + (next_region.required_stellar_reserves - stellar_reserves) + " more stellar reserves and " + (next_region.soldiers_needed - soldiers) + " more soldiers to conquer " + next_region.name + ".");
+                c.println("You need " + (next_region.required_stellar_reserves - stellar_reserves) + " MT more stellar reserves and " + (next_region.soldiers_needed - soldiers) + " more soldiers to conquer " + next_region.name + ".");
             }
         }
 
