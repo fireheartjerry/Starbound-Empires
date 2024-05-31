@@ -33,10 +33,10 @@ Requirement of stellar reserves grows exponentially
 
 # Stats
 ## Planets
-|                         | Earth | Mars | Asteroid belt | Jupiter | Saturn | Uranus | Oort cloud | Planet 31337 | Proxima centauri b |
+|                         | Earth | Mars | Asteroid belt | Jupiter | Saturn | Uranus | Oort cloud | Planet X | Proxima centauri b |
 |-------------------------|-------|------|---------------|---------|--------|--------|------------|--------------|--------------------|
 | Population cap          | 10    | 20   | 40            | 80      | 200    | 300    | 1 000      | 3 000        | 10 000             |
-| Stellar reserves needed | 0     | 50   | 300           | 1 000   | 5 000  | 9 500  | 50 000     | 100 000      | 500 000            |
+| Stellar reserves needed | 0     | 50   | 300           | 1 000   | 5 000  | 10 000  | 50 000     | 100 000      | 500 000            |
 | Soldiers needed         | 0     | 0    | 0             | 0       | 0      | 0      | 500        | 1 000        | 5 000              |
 
 |                         | Ross 128b | Hoth      | Teth      | Gliese x7x | Groza-S   | Agamar     | Wayland    | SR-25      | Awajiba    |
