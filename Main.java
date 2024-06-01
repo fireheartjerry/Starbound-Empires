@@ -43,6 +43,15 @@ public class Main {
         c.print(s + repeat(" ", n - s.length()));
     }
 
+    public static boolean randomEvent(double chance) {
+        return Math.random() < chance;
+    }
+
+    public static void clearRow(int row) {
+        c.setCursor(row, 1);
+        c.print(repeat(" ", c.getMaxColumns()));
+    }
+
     // Mimicking an enum for the game states
     public static final class GameState {
         public static final GameState MAINMENU = new GameState(0);
@@ -84,11 +93,11 @@ public class Main {
     static Region[] regions = {
         new Region("Earth", 0, 10, 0),
         new Region("Mars", 50, 20, 0),
-        new Region("Asteroid Belt", 300, 40, 0),
+        new Region("The Asteroid Belt", 300, 40, 0),
         new Region("Jupiter", 1000, 80, 0),
         new Region("Saturn", 5000, 200, 0),
         new Region("Uranus", 10000, 300, 0),
-        new Region("Oort Cloud", 50000, 1000, 500),
+        new Region("The Oort Cloud", 50000, 1000, 500),
         new Region("Planet X", 100000, 3000, 1000),
         new Region("Proxima Centauri B", 500000, 10000, 5000),
         new Region("Ross 128B", 1000000, 15000, 10000),
@@ -110,7 +119,7 @@ public class Main {
     static volatile GameState previousGameState, currentGameState;
     static double seconds_past;
     static long maxWidth, maxWidth2, numSwitch, switchCost, newSwitchCost;
-    static boolean switching, choseFirst, choseSecond, jobInputComplete, workersAvailable, doctorsAvailable, soldiersAvailable;
+    static boolean switching, choseFirst, choseSecond, jobInputComplete, workersAvailable, doctorsAvailable, soldiersAvailable, conqueringPlanet;
     static String firstSwitch, secondSwitch;
     static Runnable jobSwitchRunnable, keyListenerRunnable;
     static String[] professions = {"Unemployed", "Workers", "Doctors", "Soldiers"};
@@ -167,16 +176,16 @@ public class Main {
 
     public static void setupGameVariables() {
         // We start with 0 stellar reserves and energy
-        stellar_reserves = 0;
-        energy = 100;
+        stellar_reserves = 100000;
+        energy = 1000;
 
         // We start with 1 population, and just 1 worker
-        population = 1;
+        population = 3000;
         unemployed = 0;
-        workers = 1;
-        doctors = 0;
-        soldiers = 0;
-        population_capacity = 10;
+        workers = 1000;
+        doctors = 1000;
+        soldiers = 1000;
+        population_capacity = 10000;
         current_region = 0;
 
         seconds_past = 0f;
@@ -186,6 +195,7 @@ public class Main {
         switching = false;
         choseFirst = false;
         choseSecond = false;
+        conqueringPlanet = false;
         switchCost = 600;
 
         currentKeyPressed = 0;
@@ -198,19 +208,21 @@ public class Main {
 
     public static void updateGameVariables() {
         stellar_reserves_production_rate = workers * 0.1;
-        energy_production_rate = workers * 10; // gigajoules
+        energy_production_rate = workers * 5; // gigajoules
         population_growth_rate = doctors * 0.1 + 0.1; // people per second
 
         if (iterations % 100 == 0) {
             stellar_reserves += stellar_reserves_production_rate*10;
-            if (population <= population_capacity)
+            // Population only grows if there is enough energy
+            if (energy >= population*200 && population < population_capacity) {
                 population += population_growth_rate*10;
-            else
-                population = population_capacity;
-            unemployed = population - workers - doctors - soldiers;
+                if (population > population_capacity)
+                    population = population_capacity;
+            } unemployed = population - workers - doctors - soldiers;
         }
 
-        energy += energy_production_rate / 10;
+        if (iterations % 2 == 0)
+            energy += energy_production_rate / 5;
     }
 
     public static void initializeGame() {
@@ -380,7 +392,7 @@ public class Main {
         }
 
         // Print descriptoin
-        c.println("You can switch professions to better manage your colony. Each switch costs " + switchCost + " GJ/person switched, this value increases exponentially for each person switched. You can switch between Workers, Doctors, Soldiers, and Unemployed. Workers produce energy, doctors increase population growth, and soldiers help conquer new planets.\n");
+        c.println("You can switch professions to manage your colony. Each switch costs " + switchCost + " GJ/person switched. The cost increases exponentially for each person switched. Choose between Workers (energy and stellar reserve production), Doctors (population growth), Soldiers (planet conquering), and Unemployed. Population growth requires a set amount of energy.\n");
         
         c.print("Time: ");
         c.print(seconds_past, 2, 1);
@@ -562,7 +574,12 @@ public class Main {
         c.setCursor(6, 1);
         c.println("- You can conquer new planets to expand your empire. Each planet increases your current population capacity and requires a certain amount of stellar reserves to conquer.\n- As you progress, you will also need soldiers to conquer more challenging planets.\n- Be prepared for random events that may affect your conquests.\n- Your final goal is to conquer the legendary Awajiba planet. Good luck!\n");
 
-        c.println("Current Planet: " + regions[current_region].name);
+        if (currentKeyPressed == 'B' || currentKeyPressed == 'b') {
+            conqueringPlanet = true;
+            currentKeyPressed = 0;
+        }
+
+        c.println("Current Region: " + regions[current_region].name);
         c.println("Population Capacity: " + regions[current_region].population_capacity + "\n");
 
         c.println("Stellar Reserves: " + stellar_reserves + " MT");
@@ -570,12 +587,92 @@ public class Main {
 
         if (current_region < 17) {
             Region next_region = regions[current_region+1];
-            c.println("Next Planet: " + next_region.name);
+            c.println("Next Region: " + next_region.name);
             c.println("Stellar Reserves Required: " + next_region.required_stellar_reserves + " MT");
             c.println("Soldiers Needed: " + next_region.soldiers_needed + "\n");
 
             if (stellar_reserves >= next_region.required_stellar_reserves && soldiers >= next_region.soldiers_needed) {
-                c.println("You have enough resources to conquer the next planet. Press B to begin conquering " + next_region.name + ".");
+                if (conqueringPlanet) {
+                    long reserves_payment = next_region.required_stellar_reserves;
+                    long soldiers_payment = next_region.soldiers_needed;
+
+                    clearRow(c.getRow());
+                    c.setCursor(c.getRow()-1, 1);
+                    c.print("Press any character to prepare your soldiers.");
+                    c.getChar();
+                    clearRow(c.getRow());
+                    c.setCursor(c.getRow()-1, 1);
+
+                    boolean caughtOffGuard = randomEvent(0.15);
+                    boolean underestimated = randomEvent(0.35);
+
+                    try {
+                        int start = (int) (Math.random() * 6) + 3;
+                        for (int i = start*10; i >= 1; i--) {
+                            c.print("Troops land in " + (int) i/10 + "...");
+                            Thread.sleep(80);
+                            ++iterations;
+                            c.setCursor(c.getRow(), 1);
+                        }
+                    } catch (InterruptedException e) {
+                        e.printStackTrace();
+                    }
+
+                    // Random events
+                    c.setCursor(c.getRow(), 1);
+                    if (caughtOffGuard) {
+                        c.println("The alien forces on " + next_region.name + " were caught off guard by your powerful military strategy! You have conquered the planet with ease, and the amounts needed are decreased.");
+                        reserves_payment -= reserves_payment * (Math.random() * 0.2 + 0.1);
+                        soldiers_payment -= soldiers_payment * (Math.random() * 0.2 + 0.1);
+                    } else if (underestimated) {
+                        c.println("The alien forces on " + next_region.name + " were underestimated, and a bloody battle ensues! The amounts needed are increased.");
+                        reserves_payment += reserves_payment * (Math.random() * 0.2 + 0.1);
+                        soldiers_payment += soldiers_payment * (Math.random() * 0.2 + 0.1);
+                    } else {
+                        c.println("The alien forces on " + next_region.name + " have put up some resistance, but you have conquered the planet!");
+                    }
+
+                    c.println();
+                    try {
+                        int start = (int) (Math.random() * 8) + 3;
+                        for (int i = start*10; i >= 1; i--) {
+                            c.print("Finishing battle in " + (int) i/10 + "...");
+                            Thread.sleep(80);
+                            ++iterations;
+                            c.setCursor(c.getRow(), 1);
+                        }
+                    } catch (InterruptedException e) {
+                        e.printStackTrace();
+                    }
+
+                    // If we don't have enough stellar reserves or soldiers, we can't conquer the planet
+                    if (underestimated && (stellar_reserves < reserves_payment || soldiers < soldiers_payment)) {
+                        c.println("After the amounts needed were increased, you do not have enough resources to conquer " + next_region.name + ". Your soldiers and population have been decimated, and your stellar reserves and energy have been emptied.");
+
+                        // Set these to zero
+                        stellar_reserves = 0;
+                        energy = 0;
+                        soldiers = 0;
+                        unemployed = 0;
+
+                        // Decrease workers and doctors by a random large percentage
+                        workers -= workers * (Math.random() * 0.5 + 0.2);
+                        doctors -= doctors * (Math.random() * 0.5 + 0.2);
+                    } else {
+                        c.println("You have successfully conquered " + next_region.name + "! Press any key to continue.");
+                        c.getChar();
+                        stellar_reserves -= reserves_payment;
+                        soldiers -= soldiers_payment;
+                        population_capacity = next_region.population_capacity;
+                        ++current_region;
+                    }
+
+                    conqueringPlanet = false;
+                    currentGameState = GameState.CLEARED_SCREEN;
+                } else {
+                    c.print("You have enough resources to conquer the next planet. Press B to begin conquering " + next_region.name + ".");
+                }
+
             } else {
                 c.println("You need " + (next_region.required_stellar_reserves - stellar_reserves) + " MT more stellar reserves and " + (next_region.soldiers_needed - soldiers) + " more soldiers to conquer " + next_region.name + ".");
             }
