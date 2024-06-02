@@ -3,13 +3,20 @@ import java.awt.Font;
 import java.awt.Color;
 import java.awt.FontFormatException;
 import java.awt.Image;
+import java.awt.*;
 import java.io.File;
 import java.io.InputStream;
 import java.io.IOException;
 import java.io.FileInputStream;
 import javax.imageio.ImageIO;
-import java.util.List;
-import java.util.ArrayList;
+import javax.sound.sampled.AudioFormat;
+import javax.sound.sampled.AudioInputStream;
+import javax.sound.sampled.AudioSystem;
+import javax.sound.sampled.Clip;
+import javax.sound.sampled.DataLine;
+import javax.sound.sampled.LineUnavailableException;
+import javax.sound.sampled.SourceDataLine;
+import javax.sound.sampled.UnsupportedAudioFileException;
 
 public class Main {
     static Console c; // HSA Console
@@ -21,10 +28,10 @@ public class Main {
         c.drawString(message, x, y);
     }
 
-    public static void displayBackgroundImage() {
+    public static void displayBackgroundImage(String path) {
         Image picture = null;
         try {
-            picture = ImageIO.read(new File("Assets/stars.jpg"));
+            picture = ImageIO.read(new File(path));
         } catch (IOException e) {
             e.printStackTrace();
             System.err.println("There was an I/O error when reading the background image file.");
@@ -50,6 +57,69 @@ public class Main {
     public static void clearRow(int row) {
         c.setCursor(row, 1);
         c.print(repeat(" ", c.getMaxColumns()));
+    }
+
+
+    public static void playBackgroundMusic() {
+        Thread musicThread = new Thread(new Runnable() {
+            public void run() {
+                AudioInputStream audioStream = null;
+                Clip audioClip = null;
+                try {
+                    File audioFile = new File(musicPath);
+                    if (!audioFile.exists()) {
+                        System.err.println("Audio file not found: " + musicPath);
+                        return;
+                    }
+
+                    // Get an audio input stream from the file
+                    audioStream = AudioSystem.getAudioInputStream(audioFile);
+
+                    // Get the audio format
+                    AudioFormat audioFormat = audioStream.getFormat();
+
+                    // Get a data line info object for the SourceDataLine
+                    DataLine.Info info = new DataLine.Info(SourceDataLine.class, audioFormat);
+
+                    // Get a SourceDataLine
+                    SourceDataLine sourceLine = (SourceDataLine) AudioSystem.getLine(info);
+                    sourceLine.open(audioFormat);
+                    sourceLine.start();
+
+                    // Buffer for reading the audio data
+                    byte[] buffer = new byte[4096];
+                    int bytesRead = 0;
+
+                    // Continuously read and write audio data
+                    while (running) {
+                        while ((bytesRead = audioStream.read(buffer, 0, buffer.length)) != -1) {
+                            sourceLine.write(buffer, 0, bytesRead);
+                        }
+                        audioStream = AudioSystem.getAudioInputStream(audioFile);
+                    }
+
+                } catch (UnsupportedAudioFileException e) {
+                    System.err.println("The specified audio file format is not supported.");
+                    e.printStackTrace();
+                } catch (LineUnavailableException e) {
+                    System.err.println("Audio line for playing back is unavailable.");
+                    e.printStackTrace();
+                } catch (IOException e) {
+                    System.err.println("Error playing the audio file.");
+                    e.printStackTrace();
+                } finally {
+                    try {
+                        if (audioStream != null) {
+                            audioStream.close();
+                        }
+                    } catch (IOException e) {
+                        e.printStackTrace();
+                    }
+                }
+            }
+        });
+
+        musicThread.start();
     }
 
     // Mimicking an enum for the game states
@@ -120,15 +190,18 @@ public class Main {
     static double seconds_past;
     static long maxWidth, maxWidth2, numSwitch, switchCost, newSwitchCost;
     static boolean switching, choseFirst, choseSecond, jobInputComplete, workersAvailable, doctorsAvailable, soldiersAvailable, conqueringPlanet;
-    static String firstSwitch, secondSwitch;
+    static String firstSwitch, secondSwitch, musicPath = "Assets/bgmusictest.wav";
     static Runnable jobSwitchRunnable, keyListenerRunnable;
     static String[] professions = {"Unemployed", "Workers", "Doctors", "Soldiers"};
+    static Clip audioClip;
+    static AudioInputStream audioStream;
+    static boolean running = true;
 
     public static void displayStartingScreen() {
         c.clear();
 
         // Include a nice background image
-        displayBackgroundImage();
+        displayBackgroundImage("Assets/stars.jpg");
 
         // Write the static messages (they do not require a loop)
         displayGraphicalText("Welcome To", new Font("Consolas", Font.BOLD, 60), Color.GREEN, 445, 80);
@@ -176,16 +249,16 @@ public class Main {
 
     public static void setupGameVariables() {
         // We start with 0 stellar reserves and energy
-        stellar_reserves = 100000;
-        energy = 1000;
+        stellar_reserves = 0;
+        energy = 0;
 
         // We start with 1 population, and just 1 worker
-        population = 3000;
+        population = 1;
         unemployed = 0;
-        workers = 1000;
-        doctors = 1000;
-        soldiers = 1000;
-        population_capacity = 10000;
+        workers = 1;
+        doctors = 0;
+        soldiers = 0;
+        population_capacity = 10;
         current_region = 0;
 
         seconds_past = 0f;
@@ -208,7 +281,7 @@ public class Main {
 
     public static void updateGameVariables() {
         stellar_reserves_production_rate = workers * 0.1;
-        energy_production_rate = workers * 5; // gigajoules
+        energy_production_rate = workers * 5 + 5; // gigajoules
         population_growth_rate = doctors * 0.1 + 0.1; // people per second
 
         if (iterations % 100 == 0) {
@@ -253,7 +326,7 @@ public class Main {
             c.clear();
         } while (colony_name.length() > 30 || colony_name.length() < 1);
 
-        displayBackgroundImage();
+        displayBackgroundImage("Assets/planet.jpg");
         displayGraphicalText(colony_name, customFont.deriveFont(50f), Color.CYAN, 10, 45);
         displayRules();
         displayGraphicalText(colony_name, customFont.deriveFont(50f), Color.CYAN, 10, 45);
@@ -374,9 +447,13 @@ public class Main {
 
         c.println(dashes + "-- LIMITS & RATES --" + dashes);
         c.println("Population Capacity: " + population_capacity);
-        c.println("Stellar Reserves Production Rate: " + stellar_reserves_production_rate + " MT/s");
+        c.print("Stellar Reserves Production Rate: ");
+        c.print(stellar_reserves_production_rate, 2, 1);
+        c.println(" MT/s");
         c.println("Energy Production Rate: " + energy_production_rate + " GJ/s");
-        c.println("Population Growth Rate: " + population_growth_rate + " people/s");
+        c.print("Population Growth Rate: ");
+        c.print(population_growth_rate, 2, 1);
+        c.println(" people/s");        
 
         c.print("_________________________________________________________\n\nTime: ");
         c.print(seconds_past, 2, 1);
@@ -663,7 +740,7 @@ public class Main {
                         c.getChar();
                         stellar_reserves -= reserves_payment;
                         soldiers -= soldiers_payment;
-                        population_capacity = next_region.population_capacity;
+                        population_capacity += next_region.population_capacity;
                         ++current_region;
                     }
 
@@ -684,11 +761,12 @@ public class Main {
     }
 
     public static void main(String[] args) {
+        playBackgroundMusic();
         c = new Console(29, 115, 18, "Starbound Empires"); // Initialize the console
         initializeGame();
 
         // Keeping the main thread alive to keep the application running
-        while (true) {
+        while (running) {
             if (c.isCharAvail())
                 currentKeyPressed = c.getChar();
             updateGameVariables();
@@ -702,6 +780,14 @@ public class Main {
             } catch (InterruptedException e) {
                 e.printStackTrace();
             }
+        }
+
+        try {
+            audioClip.stop();
+            audioClip.close();
+            audioStream.close();
+        } catch (IOException e) {
+            e.printStackTrace();
         }
     }
 }
