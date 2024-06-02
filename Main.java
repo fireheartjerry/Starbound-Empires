@@ -59,12 +59,10 @@ public class Main {
         c.print(repeat(" ", c.getMaxColumns()));
     }
 
-
     public static void playBackgroundMusic() {
         Thread musicThread = new Thread(new Runnable() {
             public void run() {
                 AudioInputStream audioStream = null;
-                Clip audioClip = null;
                 try {
                     File audioFile = new File(musicPath);
                     if (!audioFile.exists()) {
@@ -120,6 +118,60 @@ public class Main {
         });
 
         musicThread.start();
+    }
+
+    public static void playGameSound(String soundPath) {
+        AudioInputStream audioStream = null;
+        try {
+            File audioFile = new File(soundPath);
+            if (!audioFile.exists()) {
+                System.err.println("Audio file not found: " + soundPath);
+                return;
+            }
+
+            // Get an audio input stream from the file
+            audioStream = AudioSystem.getAudioInputStream(audioFile);
+
+            // Get the audio format
+            AudioFormat audioFormat = audioStream.getFormat();
+
+            // Get a data line info object for the SourceDataLine
+            DataLine.Info info = new DataLine.Info(SourceDataLine.class, audioFormat);
+
+            // Get a SourceDataLine
+            SourceDataLine sourceLine = (SourceDataLine) AudioSystem.getLine(info);
+            sourceLine.open(audioFormat);
+            sourceLine.start();
+
+            // Buffer for reading the audio data
+            byte[] buffer = new byte[4096];
+            int bytesRead = 0;
+
+            // Continuously read and write audio data
+            while ((bytesRead = audioStream.read(buffer, 0, buffer.length)) != -1) {
+                sourceLine.write(buffer, 0, bytesRead);
+            }
+            audioStream = AudioSystem.getAudioInputStream(audioFile);
+            
+
+        } catch (UnsupportedAudioFileException e) {
+            System.err.println("The specified audio file format is not supported.");
+            e.printStackTrace();
+        } catch (LineUnavailableException e) {
+            System.err.println("Audio line for playing back is unavailable.");
+            e.printStackTrace();
+        } catch (IOException e) {
+            System.err.println("Error playing the audio file.");
+            e.printStackTrace();
+        } finally {
+            try {
+                if (audioStream != null) {
+                    audioStream.close();
+                }
+            } catch (IOException e) {
+                e.printStackTrace();
+            }
+        }
     }
 
     // Mimicking an enum for the game states
@@ -319,16 +371,31 @@ public class Main {
         }
 
         displayStartingScreen();
+        new Thread(new Runnable() {
+            public void run() {
+                playGameSound("Assets/menuswitch.wav");
+            }
+        }).start();
 
         do {
             c.print("What is your colony name (max 30 characters)? ");
             colony_name = c.readLine();
             c.clear();
         } while (colony_name.length() > 30 || colony_name.length() < 1);
+        new Thread(new Runnable() {
+            public void run() {
+                playGameSound("Assets/menuswitch.wav");
+            }
+        }).start();
 
         displayBackgroundImage("Assets/stars.jpg");
         displayGraphicalText(colony_name, customFont.deriveFont(50f), Color.CYAN, 10, 45);
         displayRules();
+        new Thread(new Runnable() {
+            public void run() {
+                playGameSound("Assets/menuswitch.wav");
+            }
+        }).start();
         displayGraphicalText(colony_name, customFont.deriveFont(50f), Color.CYAN, 10, 45);
         setupGameVariables();
 
@@ -336,17 +403,44 @@ public class Main {
     }
 
     public static void updateGameStates() {
-        if ((currentKeyPressed == 'M' || currentKeyPressed == 'm') && currentGameState != GameState.MAINMENU)
+        if ((currentKeyPressed == 'M' || currentKeyPressed == 'm') && currentGameState != GameState.MAINMENU) {
+            new Thread(new Runnable() {
+                public void run() {
+                    playGameSound("Assets/menuswitch.wav");
+                }
+            }).start();
+            switching = false;
+            choseFirst = false;
+            choseSecond = false;
             currentGameState = GameState.MAINMENU;
+        }
 
-        else if ((currentKeyPressed == 'D' || currentKeyPressed == 'd') && currentGameState != GameState.DASHBOARD)
+        else if ((currentKeyPressed == 'D' || currentKeyPressed == 'd') && currentGameState != GameState.DASHBOARD) {
+            new Thread(new Runnable() {
+                public void run() {
+                    playGameSound("Assets/menuswitch.wav");
+                }
+            }).start();
             currentGameState = GameState.DASHBOARD;
+        }
 
-        else if ((currentKeyPressed == 'P' || currentKeyPressed == 'p') && currentGameState != GameState.POPULATION)
+        else if ((currentKeyPressed == 'P' || currentKeyPressed == 'p') && currentGameState != GameState.POPULATION) {
+            new Thread(new Runnable() {
+                public void run() {
+                    playGameSound("Assets/menuswitch.wav");
+                }
+            }).start();
             currentGameState = GameState.POPULATION;
+        }
         
-        else if ((currentKeyPressed == 'C' || currentKeyPressed == 'c') && currentGameState != GameState.PLANETMAP)
+        else if ((currentKeyPressed == 'C' || currentKeyPressed == 'c') && currentGameState != GameState.PLANETMAP) {
+            new Thread(new Runnable() {
+                public void run() {
+                    playGameSound("Assets/menuswitch.wav");
+                }
+            }).start();
             currentGameState = GameState.PLANETMAP;
+        }
     }
 
     public static void displayHeader(String headerTitle, GameState newGameState) {
@@ -462,14 +556,16 @@ public class Main {
         if (currentKeyPressed == 'U' || currentKeyPressed == 'u') {
             switching = true;
             currentKeyPressed = 0;
+            new Thread(new Runnable() {
+                public void run() {
+                    playGameSound("Assets/defaultclick.wav");
+                }
+            }).start();
         }
 
         // Print descriptoin
         c.println("You can switch professions to manage your colony. Each switch costs " + switchCost + " GJ/person switched. The cost increases exponentially for each person switched. Choose between Workers (energy and stellar reserve production), Doctors (population growth), Soldiers (planet conquering), and Unemployed. Population growth requires a set amount of energy.\n");
         
-        c.print("Time: ");
-        c.print(seconds_past, 2, 1);
-        c.println(" s");
         c.println("Energy: " + energy + " GJ");
         c.println("Energy Production Rate: " + energy_production_rate + " GJ/s\n");
 
@@ -490,18 +586,33 @@ public class Main {
                 c.println("Press 4 for Soldiers");
                 c.println("Press 5 to cancel");
                 if (currentKeyPressed == '1' || currentKeyPressed == '2' || currentKeyPressed == '3' || currentKeyPressed == '4') {
+                    new Thread(new Runnable() {
+                        public void run() {
+                            playGameSound("Assets/defaultclick.wav");
+                        }
+                    }).start();
                     firstSwitch = professions[currentKeyPressed-'0'-1];
                     currentKeyPressed = 0;
                     choseFirst = true;
                     currentGameState = GameState.CLEARED_SCREEN;
                     previousGameState = GameState.POPULATION;
                 } else if (currentKeyPressed == '5') {
+                    new Thread(new Runnable() {
+                        public void run() {
+                            playGameSound("Assets/defaultclick.wav");
+                        }
+                    }).start();
                     switching = false;
                     choseFirst = false;
                     choseSecond = false;
                     currentGameState = GameState.CLEARED_SCREEN;
                     previousGameState = GameState.POPULATION;
                 } else if (currentKeyPressed != 0) {
+                    new Thread(new Runnable() {
+                        public void run() {
+                            playGameSound("Assets/invalidclick.wav");
+                        }
+                    }).start();
                     c.println("Invalid input. Please try again.");
                     currentKeyPressed = 0;
                 }
@@ -513,9 +624,23 @@ public class Main {
                 c.println("Press 2 for Doctors");
                 c.println("Press 3 for Soldiers");
                 c.println("Press 4 to cancel");
-                if (currentKeyPressed == '4')
+                if (currentKeyPressed == '4') {
+                    new Thread(new Runnable() {
+                        public void run() {
+                            playGameSound("Assets/defaultclick.wav");
+                        }
+                    }).start();
                     switching = false;
-                else if (currentKeyPressed == '1' || currentKeyPressed == '2' || currentKeyPressed == '3') {
+                    choseFirst = false;
+                    choseSecond = false;
+                    currentGameState = GameState.CLEARED_SCREEN;
+                    previousGameState = GameState.POPULATION;
+                } else if (currentKeyPressed == '1' || currentKeyPressed == '2' || currentKeyPressed == '3') {
+                    new Thread(new Runnable() {
+                        public void run() {
+                            playGameSound("Assets/defaultclick.wav");
+                        }
+                    }).start();
                     secondSwitch = professions[currentKeyPressed-'0'];
                     if (secondSwitch.equals(firstSwitch)) {
                         c.println("You cannot switch to the same profession.");
@@ -526,12 +651,22 @@ public class Main {
                         previousGameState = GameState.POPULATION;
                     }
                 } else if (currentKeyPressed == '4') {
+                    new Thread(new Runnable() {
+                        public void run() {
+                            playGameSound("Assets/defaultclick.wav");
+                        }
+                    }).start();
                     switching = false;
                     choseFirst = false;
                     choseSecond = false;
                     currentGameState = GameState.CLEARED_SCREEN;
                     previousGameState = GameState.POPULATION;
                 } else if (currentKeyPressed != 0) {
+                    new Thread(new Runnable() {
+                        public void run() {
+                            playGameSound("Assets/invalidclick.wav");
+                        }
+                    }).start();
                     c.println("Invalid input. Please try again.");
                     currentKeyPressed = 0;
                 }
