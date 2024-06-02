@@ -3,7 +3,6 @@ import java.awt.Font;
 import java.awt.Color;
 import java.awt.FontFormatException;
 import java.awt.Image;
-import java.awt.*;
 import java.io.File;
 import java.io.InputStream;
 import java.io.IOException;
@@ -14,6 +13,7 @@ import javax.sound.sampled.AudioInputStream;
 import javax.sound.sampled.AudioSystem;
 import javax.sound.sampled.Clip;
 import javax.sound.sampled.DataLine;
+import javax.sound.sampled.FloatControl;
 import javax.sound.sampled.LineUnavailableException;
 import javax.sound.sampled.SourceDataLine;
 import javax.sound.sampled.UnsupportedAudioFileException;
@@ -82,6 +82,9 @@ public class Main {
                     // Get a SourceDataLine
                     SourceDataLine sourceLine = (SourceDataLine) AudioSystem.getLine(info);
                     sourceLine.open(audioFormat);
+                    // Adjust volume to make the music softer
+                    FloatControl volumeControl = (FloatControl) sourceLine.getControl(FloatControl.Type.MASTER_GAIN);
+                    volumeControl.setValue(-20.0f);
                     sourceLine.start();
 
                     // Buffer for reading the audio data
