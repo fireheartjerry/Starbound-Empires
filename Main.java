@@ -190,7 +190,7 @@ public class Main {
     static double seconds_past;
     static long maxWidth, maxWidth2, numSwitch, switchCost, newSwitchCost;
     static boolean switching, choseFirst, choseSecond, jobInputComplete, workersAvailable, doctorsAvailable, soldiersAvailable, conqueringPlanet;
-    static String firstSwitch, secondSwitch, musicPath = "Assets/bgmusictest.wav";
+    static String firstSwitch, secondSwitch, musicPath = "Assets/bg5.wav";
     static Runnable jobSwitchRunnable, keyListenerRunnable;
     static String[] professions = {"Unemployed", "Workers", "Doctors", "Soldiers"};
     static Clip audioClip;
@@ -326,7 +326,7 @@ public class Main {
             c.clear();
         } while (colony_name.length() > 30 || colony_name.length() < 1);
 
-        displayBackgroundImage("Assets/planet.jpg");
+        displayBackgroundImage("Assets/stars.jpg");
         displayGraphicalText(colony_name, customFont.deriveFont(50f), Color.CYAN, 10, 45);
         displayRules();
         displayGraphicalText(colony_name, customFont.deriveFont(50f), Color.CYAN, 10, 45);
@@ -350,7 +350,6 @@ public class Main {
     }
 
     public static void displayHeader(String headerTitle, GameState newGameState) {
-        c.clear();
         displayGraphicalText(colony_name, customFont.deriveFont(50f), Color.CYAN, 10, 45);
         displayGraphicalText("----------------- " + headerTitle + " -----------------", customFont.deriveFont(35f), Color.GREEN, 10, 85);
         previousGameState = currentGameState;
@@ -365,14 +364,20 @@ public class Main {
         }
 
         if (currentGameState == GameState.MAINMENU) {
-            if (currentGameState != previousGameState || previousGameState == GameState.CLEARED_SCREEN)
+            if (currentGameState != previousGameState || previousGameState == GameState.CLEARED_SCREEN) {
+                displayBackgroundImage("Assets/planet.png");
                 displayHeader("MAIN MENU", GameState.MAINMENU);
-
-            main_menu();
+                displayGraphicalText("It is your job to maximize resources and conquer all the planets!", new Font("Consolas", Font.PLAIN, 20), Color.YELLOW, 10, 150);
+                displayGraphicalText("Press D to view the dashboard.", new Font("Consolas", Font.PLAIN, 20), Color.YELLOW, 10, 185);
+                displayGraphicalText("Press P to manage your population.", new Font("Consolas", Font.PLAIN, 20), Color.YELLOW, 10, 220);
+                displayGraphicalText("Press C to conquer new planets.", new Font("Consolas", Font.PLAIN, 20), Color.YELLOW, 10, 255);
+                displayGraphicalText("Press M to return to the main menu at any time.", new Font("Consolas", Font.PLAIN, 20), Color.YELLOW, 10, 310);
+            }
         }
 
         else if (currentGameState == GameState.DASHBOARD) {
             if (currentGameState != previousGameState || previousGameState == GameState.CLEARED_SCREEN) {
+                c.clear();
                 displayHeader("DASHBOARD", GameState.DASHBOARD);
                 displayGraphicalText("Press M to return to the main menu at any time.", new Font("Consolas", Font.PLAIN, 20), Color.YELLOW, 10, 110);
             }
@@ -382,6 +387,7 @@ public class Main {
 
         else if (currentGameState == GameState.POPULATION) {
             if (currentGameState != previousGameState || previousGameState == GameState.CLEARED_SCREEN) {
+                c.clear();
                 displayHeader("POPULATION", GameState.POPULATION);
                 displayGraphicalText("Press M to return to the main menu at any time.", new Font("Consolas", Font.PLAIN, 20), Color.YELLOW, 10, 110);
             }
@@ -391,23 +397,13 @@ public class Main {
 
         else if (currentGameState == GameState.PLANETMAP) {
             if (currentGameState != previousGameState || previousGameState == GameState.CLEARED_SCREEN) {
+                c.clear();
                 displayHeader("PLANET MAP", GameState.PLANETMAP);
                 displayGraphicalText("Press M to return to the main menu at any time.", new Font("Consolas", Font.PLAIN, 20), Color.YELLOW, 10, 110);
             }
     
             planet_map();
         }
-    }
-
-    public static void main_menu() {
-        c.setCursor(5, 1);
-        displayGraphicalText("It is your job to maximize resources and conquer all the planets!", new Font("Consolas", Font.PLAIN, 20), Color.YELLOW, 10, 150);
-        displayGraphicalText("Press D to view the dashboard.", new Font("Consolas", Font.PLAIN, 20), Color.YELLOW, 10, 185);
-        displayGraphicalText("Press P to manage your population.", new Font("Consolas", Font.PLAIN, 20), Color.YELLOW, 10, 220);
-        displayGraphicalText("Press C to conquer new planets.", new Font("Consolas", Font.PLAIN, 20), Color.YELLOW, 10, 255);
-        displayGraphicalText("Press M to return to the main menu at any time.", new Font("Consolas", Font.PLAIN, 20), Color.YELLOW, 10, 310);
-
-        c.println();
     }
 
     public static void dashboard() {
