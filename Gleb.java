@@ -17,26 +17,30 @@ import javax.sound.sampled.LineUnavailableException;
 import javax.sound.sampled.SourceDataLine;
 import javax.sound.sampled.UnsupportedAudioFileException;
 
-import java.util.List;
-import java.util.ArrayList;
-
 public class Gleb
 {
     static Console c; // HSA Console
     static String[] professionNames = {"Unemployed", "Worker", "Soldier", "Doctor"};
     static String[] resourceNames = {"Stellar Reserve", "Energy"};
-    static String[] planetNames = {"Earth", "Mars", "Asteroid belt", "Jupiter", "Saturn", "Uranus", "Oort cloud", "Planet X", "Proxima Centauri B", "Ross 128b", "Hoth", "SPAS-12", "Gliese x7x", "Groza-S", "Agamar", "Wayland", "SR-25", "Awajiba"};
+    static String[] regionNames = {"Earth", "Mars", "Asteroid belt", "Jupiter", "Saturn", "Uranus", "Oort cloud", "Planet X", "Proxima Centauri B", "Ross 128b", "Hoth", "SPAS-12", "Gliese x7x", "Groza-S", "Agamar", "Wayland", "SR-25", "Awajiba"};
     static int[] soldiersNeeded = {0, 0, 0, 0, 0, 0, 500, 1000, 5000, 10000, 12000, 20000, 25000, 33000, 40000, 55000, 60000, 65000};
-    static int[] reservesNeeded = {0, 50, 300, 1000, 5000, 10000, 50000, 100000, 500000, 1000000, 2000000, 3000000, 4000000, 6000000, 10000000, 20000000, 40000000, 69420000};
+    static int[] reservesNeeded = {0, 50, 300, 1000, 5000, 10000, 50000, 100000, 500000, 1000000, 2000000, 3000000, 4000000, 6000000, 10000000, 20000000, 40000000, 694200000};
     static int[] populationCaps = {10, 20, 40, 80, 200, 300, 1000, 3000, 10000, 15000, 20000, 30000, 40000, 50000, 60000, 80000, 80000, 80000};
-    static int currentPlanet = 0;
+    static int currentRegion = 0;
     static int[] peopleCounter = {0, 1, 0, 0};
     static int[] resourceCounter = {0, 0, 0};
-    static int populationCapacity = 10;
     static double seconds_past = 0;
     static int iterations = 0;
 	static String musicPath = "Assets/bg1.wav";
 	static boolean running = true;
+
+    // Game variables
+    static String colony_name;
+    static Font customFont;
+
+    // Game rates
+    static double stellar_reserves_production_rate, energy_production_rate, population_growth_rate, energy_consumption_rate;
+	static long switchCost = 1000;
 
     /**
      * 0 - Start menu
@@ -44,7 +48,7 @@ public class Gleb
      * 2 - Rules menu
      * 3 - Main menu
      * 4 - Population menu
-     * 5 - Planets map
+     * 5 - Regions map
     */
     static int currentMenu = 0;
 
@@ -57,14 +61,12 @@ public class Gleb
 	    return b;
     }
 
-
     public static void displayGraphicalText (String message, Font font, Color col, int x, int y)
     {
 	c.setFont (font);
 	c.setColor (col);
 	c.drawString (message, x, y);
     }
-
 
     public static void displayBackgroundImage(String path) {
         Image picture = null;
@@ -77,7 +79,6 @@ public class Gleb
         c.drawImage(picture, 0, 0, null);
     }
 
-
     public static String repeat (String s, long n)
     {
 	String result = "";
@@ -86,12 +87,10 @@ public class Gleb
 	return result;
     }
 
-
     public static void printPadRight (String s, int n)
     {
 	c.print (s + repeat (" ", n - s.length ()));
     }
-
 
     public static int inputNumber (int low, int high)
     {
@@ -107,6 +106,10 @@ public class Gleb
 	}
 	while (num < low || num > high);
 	return num;
+    }
+
+    public static boolean randomEvent(double chance) {
+        return Math.random() < chance;
     }
 
     public static void playBackgroundMusic() {
@@ -172,19 +175,14 @@ public class Gleb
                 return;
             }
 
-            // Get an audio input stream from the file
-            audioStream = AudioSystem.getAudioInputStream(audioFile);
-
-            // Get the audio format
-            AudioFormat audioFormat = audioStream.getFormat();
-
-            // Get a data line info object for the SourceDataLine
-            DataLine.Info info = new DataLine.Info(SourceDataLine.class, audioFormat);
-
-            // Get a SourceDataLine
-            SourceDataLine sourceLine = (SourceDataLine) AudioSystem.getLine(info);
-            sourceLine.open(audioFormat);
-            sourceLine.start();
+			audioStream = AudioSystem.getAudioInputStream(audioFile);
+			AudioFormat audioFormat = audioStream.getFormat();
+			DataLine.Info info = new DataLine.Info(SourceDataLine.class, audioFormat);
+			SourceDataLine sourceLine = (SourceDataLine) AudioSystem.getLine(info);
+			sourceLine.open(audioFormat);
+			FloatControl volumeControl = (FloatControl) sourceLine.getControl(FloatControl.Type.MASTER_GAIN);
+			volumeControl.setValue(-20.0f);
+			sourceLine.start();
 
             // Buffer for reading the audio data
             byte[] buffer = new byte[4096];
@@ -231,17 +229,7 @@ public class Gleb
 	displayGraphicalText(subheading, new Font("Consolas", Font.PLAIN, 20), Color.YELLOW, 10, 110);
     }
 
-
-    // Game variables
-    static String colony_name;
-    static Font customFont;
-
-    // Game rates
-    static double stellar_reserves_production_rate, energy_production_rate, population_growth_rate, energy_consumption_rate;
-	static long switchCost = 600;
-
-    public static void displayStartingScreen ()
-    {
+    public static void displayStartingScreen () {
 	c.clear ();
 
 	// Include a nice background image
@@ -255,7 +243,6 @@ public class Gleb
 	displayGraphicalText ("Brought to you by Jerry Li and Jerry Chen", new Font ("OCR A Extended", Font.PLAIN, 25), Color.GREEN, 315, 600);
     }
 
-
     public static void displayRules ()
     {
     displayBackgroundImage("Assets/stars.jpg");
@@ -264,13 +251,12 @@ public class Gleb
 	displayGraphicalText ("1. You are the leader of a colony in the Starbound Empires universe. You start on Earth.", new Font ("Consolas", Font.PLAIN, 20), Color.GREEN, 10, 135);
 	displayGraphicalText ("2. You must manage your material resources: stellar reserves and energy.", new Font ("Consolas", Font.PLAIN, 20), Color.GREEN, 10, 170);
 	displayGraphicalText ("3. You must also manage your human resources: soldiers, workers, and doctors.", new Font ("Consolas", Font.PLAIN, 20), Color.GREEN, 10, 205);
-	displayGraphicalText ("4. Soldiers will help you conquer new planets.", new Font ("Consolas", Font.PLAIN, 20), Color.GREEN, 10, 240);
+	displayGraphicalText ("4. Soldiers will help you conquer new regions.", new Font ("Consolas", Font.PLAIN, 20), Color.GREEN, 10, 240);
 	displayGraphicalText ("5. Workers will increase your production of material resources.", new Font ("Consolas", Font.PLAIN, 20), Color.GREEN, 10, 275);
 	displayGraphicalText ("6. Doctors will increase your population growth.", new Font ("Consolas", Font.PLAIN, 20), Color.GREEN, 10, 310);
 	displayGraphicalText ("7. The game will become more familiar as you play.", new Font ("Consolas", Font.PLAIN, 20), Color.GREEN, 10, 345);
 	displayGraphicalText ("Press any key to continue...", new Font ("OCR A Extended", Font.BOLD, 25), Color.YELLOW, 10, 380);
     }
-
 
     public static void initializeGame ()
     {
@@ -299,7 +285,6 @@ public class Gleb
 	}
     }
 
-
     public static void displayValues ()
     {
 	// Calculating max width so we can display better
@@ -314,7 +299,7 @@ public class Gleb
 	    "Workers: " + peopleCounter [1],
 	    "Soldiers: " + peopleCounter [2],
 	    "Doctor: " + peopleCounter [3],
-	    "Population Capacity: " + populationCaps [currentPlanet],
+	    "Population Capacity: " + populationCaps [currentRegion],
 	    "Stellar Reserves Production Rate: " + stellar_reserves_production_rate + " MT/s",
 	    "Energy Production Rate: " + energy_production_rate + " GJ/s",
 	    "Population Growth Rate: " + population_growth_rate + " people/s"
@@ -348,7 +333,6 @@ public class Gleb
 	c.println (" s\n");
     }
 
-
     public static void displayPopulation ()
     {
 	for (int i = 0 ; i < 4 ; i++)
@@ -356,7 +340,6 @@ public class Gleb
 	    c.println (professionNames [i] + ": " + peopleCounter [i]);
 	}
     }
-
 
     public static void startMenu ()
     {
@@ -380,8 +363,8 @@ public class Gleb
 	c.setCursor (1, 1);
     }
 
-
     public static void nameMenu () {
+		playMenuSwitch();
 	do
 	{
 	    c.print ("What is your colony name (max 30 characters)? ");
@@ -391,7 +374,6 @@ public class Gleb
 	while (colony_name.length () > 30 || colony_name.length () < 1);
 	currentMenu = 2;
     }
-
 
     public static void rulesMenu ()
     {
@@ -415,12 +397,11 @@ public class Gleb
 	currentMenu = 3;
     }
 
-
     public static void mainMenu ()
     {
 
 	c.setCursor (6, 1);
-	displayHeader("Main Menu", "[P] - Population Menu | [M] - Planets Map");
+	displayHeader("Main Menu", "[P] - Population Menu | [M] - Region Map");
 	
 	displayValues ();
 
@@ -443,16 +424,16 @@ public class Gleb
 	}
     }
 
-
     public static void populationMenu ()
     {
 	c.setCursor (6, 1);
-	displayHeader("Population Menu", "[Z] - Back | [S] - Switch Professions (costs" + switchCost + " GJ per person)");
+	displayHeader("Population Menu", "[Z] - Back | [S] - Switch Professions (costs " + switchCost + " GJ per person)");
 
 	c.println ("Population Menu\n");
 	displayPopulation ();
-	c.println("Energy: " + resourceCounter [1] + " GJ");
-	c.println ();
+	c.println("\nEnergy: " + resourceCounter [1] + " GJ");
+	c.println("Energy Production Rate: " + energy_production_rate + " GJ/s");
+	c.println("\n");
 
 	if (c.isCharAvail ())
 	{
@@ -503,40 +484,38 @@ public class Gleb
     }
 
 
-    public static void planetMap ()
+    public static void regionMap ()
     {
 	boolean canProgress;
 
 	c.setCursor (6, 1);
 	displayHeader("Map", "[Z] - back");
 
-	c.println ("Planets Map");
-	c.println ("Current planet: " + planetNames [currentPlanet]);
-	for (int i = 0 ; i < planetNames.length ; i++)
-	{
-	    c.print (planetNames [i]);
-	    if (i != planetNames.length - 1)
-		c.print (" --> "); // arrow for every one except the last
-	}
+	c.println ("Regions Map");
+	c.println ("Current Region: " + regionNames [currentRegion]);
+	c.println ("Population Capacity: " + populationCaps [currentRegion]);
 
-	if (soldiersNeeded [currentPlanet + 1] > peopleCounter [2] || reservesNeeded [currentPlanet + 1] > resourceCounter [0] || currentPlanet == planetNames.length - 1)
+	if (soldiersNeeded [currentRegion + 1] > peopleCounter [2] || reservesNeeded [currentRegion + 1] > resourceCounter [0] || currentRegion == regionNames.length - 1)
 	    canProgress = false;
 	else
 	    canProgress = true;
 
 	c.println ();
 
-	if (currentPlanet != planetNames.length - 1)
-	{ // there are still more planets to conquer
-	    c.println ("Next planet: " + planetNames [currentPlanet + 1]);
+	if (currentRegion != regionNames.length - 1)
+	{ // there are still more regions to conquer
+	    c.println ("Next Region: " + regionNames [currentRegion + 1]);
+		c.println ("Reserves Needed: " + reservesNeeded [currentRegion + 1] + " MT");
+		c.println ("Soldiers Needed: " + soldiersNeeded [currentRegion + 1] + " soldiers");
+
 	    if (canProgress)
-		c.println ("Press [C] to conquer the next planet");
+		c.println ("Press [C] to conquer the next region");
 	    else
-		c.println ("You do not have enough resources/people to conquer the next planet.");
+		c.println ("You do not have enough resources/people to conquer the next region.");
 	}
 	else
 	{
-	    c.println ("There are no more planets to conquer. You have beaten the game!");
+	    c.println ("There are no more regions to conquer. You have beaten the game!");
 	}
 	if (c.isCharAvail ())
 	{
@@ -549,11 +528,56 @@ public class Gleb
 	    }
 	    else if (pressed == 'c' && canProgress)
 	    {
-		currentPlanet++;
-		resourceCounter [0] -= reservesNeeded [currentPlanet];
-		peopleCounter [2] -= soldiersNeeded [currentPlanet];
+			long reserves_payment = reservesNeeded [currentRegion + 1];
+			long soldiers_payment = soldiersNeeded [currentRegion + 1];
 
-		c.println ("You have conquered " + planetNames [currentPlanet]);
+			boolean caughtOffGuard = randomEvent(0.25);
+			boolean underestimated = randomEvent(0.35);
+
+			double adjustmentFactor = Math.random() * 0.2 + 0.1;
+			double adjustment;
+			if (caughtOffGuard || underestimated) {
+				String outcome;
+				if (caughtOffGuard)
+					outcome = "caught off guard by your powerful military strategy! You have conquered the region with ease, and the amounts needed are decreased.";
+				else
+					outcome = "underestimated, and a bloody battle ensues! The amounts needed are increased.";
+				c.println("The alien forces on " + regionNames [currentRegion + 1] + " were " + outcome);
+				if (caughtOffGuard)
+					adjustment = -adjustmentFactor;
+				else
+					adjustment = adjustmentFactor;
+				reserves_payment += reserves_payment * adjustment;
+				soldiers_payment += soldiers_payment * adjustment;
+			} else {
+				c.println("The alien forces on " + regionNames [currentRegion + 1] + " have put up some resistance, but you have conquered the region!");
+			}
+			
+			if (underestimated && (resourceCounter [0] < reserves_payment || peopleCounter[2] < soldiers_payment)) {
+				c.println("After the amounts needed were increased, you do not have enough resources to conquer " + regionNames [currentRegion + 1] + ". Your soldiers and population have been decimated, and your stellar reserves and energy have been emptied.");
+
+				// Set these to zero
+				resourceCounter [0] = 0;
+				resourceCounter [1] = 0;
+				peopleCounter[2] = 0;
+				peopleCounter[0] = 0;
+
+				// Decrease workers and doctors by a random large percentage
+				peopleCounter[1] -= peopleCounter[1] * (Math.random() * 0.5 + 0.2);
+				peopleCounter[3] -= peopleCounter[3] * (Math.random() * 0.5 + 0.2);
+			} else {
+				c.println("You have successfully conquered " + regionNames [currentRegion + 1] + "! Press any key to continue.");
+				c.getChar();
+				resourceCounter [0] -= reserves_payment;
+				peopleCounter[2] -= soldiers_payment;
+				++currentRegion;
+			}
+
+		currentRegion++;
+		resourceCounter [0] -= reservesNeeded [currentRegion];
+		peopleCounter [2] -= soldiersNeeded [currentRegion];
+
+		c.println ("You have conquered " + regionNames [currentRegion]);
 		c.println ("Press any key to continue");
 		c.getChar ();
 	    }
@@ -567,9 +591,10 @@ public class Gleb
     // long ticks happen every 10s
     public static void shortTick ()
     {
-	stellar_reserves_production_rate = peopleCounter [1] * 0.1; // workers * 0.1 = rate
-	energy_production_rate = peopleCounter [1] * 5; // workers * 5 = GJ/s
+	stellar_reserves_production_rate = peopleCounter [1] * 0.1 + 0.1; // workers * 0.1 = rate
+	energy_production_rate = peopleCounter [1] * 10; // workers * 5 = GJ/s
 	population_growth_rate = peopleCounter [3] * 0.1 + 0.1; // base rate of 0.1 plus 0.1 for every doctor
+	resourceCounter [1] += energy_production_rate / 10;
     }
 
 
@@ -578,12 +603,11 @@ public class Gleb
 	int finalPopulation;
 
 	resourceCounter [0] += stellar_reserves_production_rate * 10;
-	resourceCounter [1] += energy_production_rate * 10;
 	peopleCounter [0] += population_growth_rate * 10;
 	finalPopulation = peopleCounter [0] + peopleCounter [1] + peopleCounter [2] + peopleCounter [3];
-	if (finalPopulation > populationCaps [currentPlanet])
+	if (finalPopulation > populationCaps [currentRegion])
 	{
-	    peopleCounter [0] -= finalPopulation - populationCaps [currentPlanet]; // adjust to population cap
+	    peopleCounter [0] -= finalPopulation - populationCaps [currentRegion]; // adjust to population cap
 	}
     }
 
@@ -611,7 +635,7 @@ public class Gleb
 	    else if (currentMenu == 4)
 		populationMenu ();
 	    else if (currentMenu == 5)
-		planetMap ();
+		regionMap ();
 	    try
 	    {
 		Thread.sleep (80);
