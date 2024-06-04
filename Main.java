@@ -70,28 +70,18 @@ public class Main {
                         return;
                     }
 
-                    // Get an audio input stream from the file
                     audioStream = AudioSystem.getAudioInputStream(audioFile);
-
-                    // Get the audio format
                     AudioFormat audioFormat = audioStream.getFormat();
-
-                    // Get a data line info object for the SourceDataLine
                     DataLine.Info info = new DataLine.Info(SourceDataLine.class, audioFormat);
-
-                    // Get a SourceDataLine
                     SourceDataLine sourceLine = (SourceDataLine) AudioSystem.getLine(info);
                     sourceLine.open(audioFormat);
-                    // Adjust volume to make the music softer
                     FloatControl volumeControl = (FloatControl) sourceLine.getControl(FloatControl.Type.MASTER_GAIN);
                     volumeControl.setValue(-20.0f);
                     sourceLine.start();
 
-                    // Buffer for reading the audio data
                     byte[] buffer = new byte[4096];
                     int bytesRead = 0;
 
-                    // Continuously read and write audio data
                     while (running) {
                         while ((bytesRead = audioStream.read(buffer, 0, buffer.length)) != -1) {
                             sourceLine.write(buffer, 0, bytesRead);

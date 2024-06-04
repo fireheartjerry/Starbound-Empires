@@ -8,6 +8,15 @@ import java.io.InputStream;
 import java.io.IOException;
 import java.io.FileInputStream;
 import javax.imageio.ImageIO;
+import javax.sound.sampled.AudioFormat;
+import javax.sound.sampled.AudioInputStream;
+import javax.sound.sampled.AudioSystem;
+import javax.sound.sampled.DataLine;
+import javax.sound.sampled.FloatControl;
+import javax.sound.sampled.LineUnavailableException;
+import javax.sound.sampled.SourceDataLine;
+import javax.sound.sampled.UnsupportedAudioFileException;
+
 import java.util.List;
 import java.util.ArrayList;
 
@@ -16,16 +25,18 @@ public class Gleb
     static Console c; // HSA Console
     static String[] professionNames = {"Unemployed", "Worker", "Soldier", "Doctor"};
     static String[] resourceNames = {"Stellar Reserve", "Energy"};
-    static String[] planetNames = {"Earth", "Mars", "Asteroid belt", "Jupiter", "Saturn", "Uranus", "Oort cloud", "Planet X", "Proxima centauri b", "Ross 128b", "Hoth", "SPAS-12", "Gliese x7x", "Groza-S", "Agamar", "Wayland", "SR-25", "Awajiba"};
+    static String[] planetNames = {"Earth", "Mars", "Asteroid belt", "Jupiter", "Saturn", "Uranus", "Oort cloud", "Planet X", "Proxima Centauri B", "Ross 128b", "Hoth", "SPAS-12", "Gliese x7x", "Groza-S", "Agamar", "Wayland", "SR-25", "Awajiba"};
     static int[] soldiersNeeded = {0, 0, 0, 0, 0, 0, 500, 1000, 5000, 10000, 12000, 20000, 25000, 33000, 40000, 55000, 60000, 65000};
     static int[] reservesNeeded = {0, 50, 300, 1000, 5000, 10000, 50000, 100000, 500000, 1000000, 2000000, 3000000, 4000000, 6000000, 10000000, 20000000, 40000000, 69420000};
     static int[] populationCaps = {10, 20, 40, 80, 200, 300, 1000, 3000, 10000, 15000, 20000, 30000, 40000, 50000, 60000, 80000, 80000, 80000};
     static int currentPlanet = 0;
     static int[] peopleCounter = {0, 1, 0, 0};
-    static int[] resourceCounter = {0, 100000000, 0};
-    static int populationCapacity = 69;
+    static int[] resourceCounter = {0, 0, 0};
+    static int populationCapacity = 10;
     static double seconds_past = 0;
     static int iterations = 0;
+	static String musicPath = "Assets/bg1.wav";
+	static boolean running = true;
 
     /**
      * 0 - Start menu
@@ -55,19 +66,15 @@ public class Gleb
     }
 
 
-    public static void displayBackgroundImage ()
-    {
-	Image picture = null;
-	try
-	{
-	    picture = ImageIO.read (new File ("Assets/stars.jpg"));
-	}
-	catch (IOException e)
-	{
-	    e.printStackTrace ();
-	    System.err.println ("There was an I/O error when reading the background image file.");
-	}
-	c.drawImage (picture, 0, 0, null);
+    public static void displayBackgroundImage(String path) {
+        Image picture = null;
+        try {
+            picture = ImageIO.read(new File(path));
+        } catch (IOException e) {
+            e.printStackTrace();
+            System.err.println("There was an I/O error when reading the background image file.");
+        }
+        c.drawImage(picture, 0, 0, null);
     }
 
 
@@ -101,6 +108,122 @@ public class Gleb
 	while (num < low || num > high);
 	return num;
     }
+
+    public static void playBackgroundMusic() {
+        Thread musicThread = new Thread(new Runnable() {
+            public void run() {
+                AudioInputStream audioStream = null;
+                try {
+                    File audioFile = new File(musicPath);
+                    if (!audioFile.exists()) {
+                        System.err.println("Audio file not found: " + musicPath);
+                        return;
+                    }
+
+                    audioStream = AudioSystem.getAudioInputStream(audioFile);
+                    AudioFormat audioFormat = audioStream.getFormat();
+                    DataLine.Info info = new DataLine.Info(SourceDataLine.class, audioFormat);
+                    SourceDataLine sourceLine = (SourceDataLine) AudioSystem.getLine(info);
+                    sourceLine.open(audioFormat);
+                    FloatControl volumeControl = (FloatControl) sourceLine.getControl(FloatControl.Type.MASTER_GAIN);
+                    volumeControl.setValue(-20.0f);
+                    sourceLine.start();
+
+                    byte[] buffer = new byte[4096];
+                    int bytesRead = 0;
+
+                    while (running) {
+                        while ((bytesRead = audioStream.read(buffer, 0, buffer.length)) != -1) {
+                            sourceLine.write(buffer, 0, bytesRead);
+                        }
+                        audioStream = AudioSystem.getAudioInputStream(audioFile);
+                    }
+
+                } catch (UnsupportedAudioFileException e) {
+                    System.err.println("The specified audio file format is not supported.");
+                    e.printStackTrace();
+                } catch (LineUnavailableException e) {
+                    System.err.println("Audio line for playing back is unavailable.");
+                    e.printStackTrace();
+                } catch (IOException e) {
+                    System.err.println("Error playing the audio file.");
+                    e.printStackTrace();
+                } finally {
+                    try {
+                        if (audioStream != null) {
+                            audioStream.close();
+                        }
+                    } catch (IOException e) {
+                        e.printStackTrace();
+                    }
+                }
+            }
+        });
+
+        musicThread.start();
+    }
+
+    public static void playGameSound(String soundPath) {
+        AudioInputStream audioStream = null;
+        try {
+            File audioFile = new File(soundPath);
+            if (!audioFile.exists()) {
+                System.err.println("Audio file not found: " + soundPath);
+                return;
+            }
+
+            // Get an audio input stream from the file
+            audioStream = AudioSystem.getAudioInputStream(audioFile);
+
+            // Get the audio format
+            AudioFormat audioFormat = audioStream.getFormat();
+
+            // Get a data line info object for the SourceDataLine
+            DataLine.Info info = new DataLine.Info(SourceDataLine.class, audioFormat);
+
+            // Get a SourceDataLine
+            SourceDataLine sourceLine = (SourceDataLine) AudioSystem.getLine(info);
+            sourceLine.open(audioFormat);
+            sourceLine.start();
+
+            // Buffer for reading the audio data
+            byte[] buffer = new byte[4096];
+            int bytesRead = 0;
+
+            // Continuously read and write audio data
+            while ((bytesRead = audioStream.read(buffer, 0, buffer.length)) != -1) {
+                sourceLine.write(buffer, 0, bytesRead);
+            }
+            audioStream = AudioSystem.getAudioInputStream(audioFile);
+            
+
+        } catch (UnsupportedAudioFileException e) {
+            System.err.println("The specified audio file format is not supported.");
+            e.printStackTrace();
+        } catch (LineUnavailableException e) {
+            System.err.println("Audio line for playing back is unavailable.");
+            e.printStackTrace();
+        } catch (IOException e) {
+            System.err.println("Error playing the audio file.");
+            e.printStackTrace();
+        } finally {
+            try {
+                if (audioStream != null) {
+                    audioStream.close();
+                }
+            } catch (IOException e) {
+                e.printStackTrace();
+            }
+        }
+    }
+
+	public static void playMenuSwitch() {
+		new Thread(new Runnable() {
+			public void run() {
+				playGameSound("Assets/menuswitch.wav");
+			}
+		}).start();
+	}
     
     public static void displayHeader(String headerTitle, String subheading) {
 	displayGraphicalText(colony_name, customFont.deriveFont(50f), Color.CYAN, 10, 45);
@@ -115,13 +238,14 @@ public class Gleb
 
     // Game rates
     static double stellar_reserves_production_rate, energy_production_rate, population_growth_rate, energy_consumption_rate;
+	static long switchCost = 600;
 
     public static void displayStartingScreen ()
     {
 	c.clear ();
 
 	// Include a nice background image
-	displayBackgroundImage ();
+	displayBackgroundImage ("Assets/stars.jpg");
 
 	// Write the static messages (they do not require a loop)
 	displayGraphicalText ("Welcome To", new Font ("Consolas", Font.BOLD, 60), Color.GREEN, 445, 80);
@@ -134,6 +258,8 @@ public class Gleb
 
     public static void displayRules ()
     {
+    displayBackgroundImage("Assets/stars.jpg");
+    displayGraphicalText(colony_name, customFont.deriveFont(50f), Color.CYAN, 10, 45);
 	displayGraphicalText ("Instructions:", new Font ("OCR A Extended", Font.BOLD, 30), Color.YELLOW, 10, 100);
 	displayGraphicalText ("1. You are the leader of a colony in the Starbound Empires universe. You start on Earth.", new Font ("Consolas", Font.PLAIN, 20), Color.GREEN, 10, 135);
 	displayGraphicalText ("2. You must manage your material resources: stellar reserves and energy.", new Font ("Consolas", Font.PLAIN, 20), Color.GREEN, 10, 170);
@@ -255,8 +381,7 @@ public class Gleb
     }
 
 
-    public static void nameMenu ()
-    {
+    public static void nameMenu () {
 	do
 	{
 	    c.print ("What is your colony name (max 30 characters)? ");
@@ -270,6 +395,7 @@ public class Gleb
 
     public static void rulesMenu ()
     {
+		playMenuSwitch();
 	displayRules ();
 	c.getChar ();
 	// clear console
@@ -292,7 +418,7 @@ public class Gleb
 
     public static void mainMenu ()
     {
-	c.clear ();
+
 	c.setCursor (6, 1);
 	displayHeader("Main Menu", "[P] - Population Menu | [M] - Planets Map");
 	
@@ -303,11 +429,16 @@ public class Gleb
 	    char pressed = c.getChar ();
 	    if (pressed == 'p')
 	    {
+			c.clear();
+			playMenuSwitch();
 		currentMenu = 4;
 	    }
 	    else if (pressed == 'm')
 	    {
+			c.clear();
+			playMenuSwitch();
 		currentMenu = 5;
+		pressed = 0;
 	    }
 	}
     }
@@ -315,12 +446,12 @@ public class Gleb
 
     public static void populationMenu ()
     {
-	c.clear ();
 	c.setCursor (6, 1);
-	displayHeader("Population Menu", "[Z] - Back | [S] - Switch people's professions");
+	displayHeader("Population Menu", "[Z] - Back | [S] - Switch Professions (costs" + switchCost + " GJ per person)");
 
 	c.println ("Population Menu\n");
 	displayPopulation ();
+	c.println("Energy: " + resourceCounter [1] + " GJ");
 	c.println ();
 
 	if (c.isCharAvail ())
@@ -328,29 +459,45 @@ public class Gleb
 	    char pressed = c.getChar ();
 	    if (pressed == 'z')
 	    {
+			playMenuSwitch();
+			c.clear();
 		currentMenu = 3;
 	    }
 	    else if (pressed == 's')
 	    {
 		int switchFrom, switchTo, numSwitch;
 
-		c.println ("Population switcher");
+		c.println ("Profession Switcher");
 		c.println ("Enter profession to switch from: [0] - Unemployed | [1] - Worker | [2] - Soldier | [3] - Doctor");
 		switchFrom = inputNumber (0, 3);
 
 		c.println ("Enter profession to switch to: [0] - Unemployed | [1] - Worker | [2] - Soldier | [3] - Doctor");
 		switchTo = inputNumber (0, 3);
 
-		c.println ("Enter amount to switch");
+		c.println ("Enter how many people to switch: ");
 		// at most, you can switch all your people, or you can switch until you have no energy left
 		// thus, we must use a min function to see which one we are constrained by
-		// since it takes 1TJ = 1000GJ of energy to switch one person, energy constraint is energy/1000
-		numSwitch = inputNumber (0, min (peopleCounter [switchFrom], resourceCounter [1] / 1000));
+		// we calculate the max number of switches we can do with the exponential cost function
+		int max_energy_switches = 0;
+		long temp_switch_cost = switchCost, temp_energy = resourceCounter [1];
+		while (temp_energy > temp_switch_cost) {
+			++max_energy_switches;
+			temp_energy -= temp_switch_cost;
+			temp_switch_cost *= (long) ((double) temp_switch_cost * 1.25);
+		}
+
+		numSwitch = inputNumber (0, min (peopleCounter [switchFrom], max_energy_switches));
+
+		long required_cost = 0;
+		for (int i = 0; i < numSwitch; i++) {
+			required_cost += switchCost;
+			switchCost *= (long) ((double) switchCost * 1.25);
+		}
 
 		// perform the switch
 		peopleCounter [switchFrom] -= numSwitch;
 		peopleCounter [switchTo] += numSwitch;
-		resourceCounter [1] -= 1000 * numSwitch;
+		resourceCounter [1] -= required_cost;
 	    }
 	}
     }
@@ -360,7 +507,6 @@ public class Gleb
     {
 	boolean canProgress;
 
-	c.clear ();
 	c.setCursor (6, 1);
 	displayHeader("Map", "[Z] - back");
 
@@ -397,6 +543,8 @@ public class Gleb
 	    char pressed = c.getChar ();
 	    if (pressed == 'z')
 	    {
+			playMenuSwitch();
+			c.clear();
 		currentMenu = 3;
 	    }
 	    else if (pressed == 'c' && canProgress)
@@ -430,6 +578,7 @@ public class Gleb
 	int finalPopulation;
 
 	resourceCounter [0] += stellar_reserves_production_rate * 10;
+	resourceCounter [1] += energy_production_rate * 10;
 	peopleCounter [0] += population_growth_rate * 10;
 	finalPopulation = peopleCounter [0] + peopleCounter [1] + peopleCounter [2] + peopleCounter [3];
 	if (finalPopulation > populationCaps [currentPlanet])
@@ -441,11 +590,12 @@ public class Gleb
 
     public static void main (String[] args)
     {
+		playBackgroundMusic();
 	c = new Console (29, 115, 18, "Starbound Empires"); // Initialize the console
 	initializeGame ();
 
 	// Keeping the main thread alive to keep the application running
-	while (true)
+	while (running)
 	{
 	    shortTick ();
 	    if (iterations % 100 == 0)
