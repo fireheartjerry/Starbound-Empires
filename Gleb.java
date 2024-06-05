@@ -33,7 +33,7 @@ public class Gleb
     static int[] resourceCounter = {0, 0, 0};
     static double seconds_past = 0;
     static int iterations = 0;
-	static String musicPath = "Assets/bg1.wav";
+	static String musicPath = "Assets/bg6.wav";
 	static boolean running = true, image_not_shown = true;
 
     // Game variables
