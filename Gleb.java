@@ -16,6 +16,8 @@ import javax.sound.sampled.FloatControl;
 import javax.sound.sampled.LineUnavailableException;
 import javax.sound.sampled.SourceDataLine;
 import javax.sound.sampled.UnsupportedAudioFileException;
+import java.text.DecimalFormat;
+import java.lang.Math;
 
 public class Gleb
 {
@@ -32,14 +34,14 @@ public class Gleb
     static double seconds_past = 0;
     static int iterations = 0;
 	static String musicPath = "Assets/bg1.wav";
-	static boolean running = true;
+	static boolean running = true, image_not_shown = true;
 
     // Game variables
     static String colony_name;
     static Font customFont;
 
     // Game rates
-    static double stellar_reserves_production_rate, energy_production_rate, population_growth_rate, energy_consumption_rate;
+    static double stellar_reserves_production_rate, energy_production_rate, population_growth_rate;
 	static long switchCost = 1000;
 
     /**
@@ -223,6 +225,12 @@ public class Gleb
 		}).start();
 	}
     
+	public static String getRoundedDouble(double value) {
+        DecimalFormat df = new DecimalFormat("0.0");
+        String seconds_past_display = df.format(value);
+		return seconds_past_display;
+	}
+
     public static void displayHeader(String headerTitle, String subheading) {
 	displayGraphicalText(colony_name, customFont.deriveFont(50f), Color.CYAN, 10, 45);
 	displayGraphicalText("----------------- " + headerTitle + " -----------------", customFont.deriveFont(35f), Color.GREEN, 10, 85);
@@ -249,7 +257,7 @@ public class Gleb
     displayGraphicalText(colony_name, customFont.deriveFont(50f), Color.CYAN, 10, 45);
 	displayGraphicalText ("Instructions:", new Font ("OCR A Extended", Font.BOLD, 30), Color.YELLOW, 10, 100);
 	displayGraphicalText ("1. You are the leader of a colony in the Starbound Empires universe. You start on Earth.", new Font ("Consolas", Font.PLAIN, 20), Color.GREEN, 10, 135);
-	displayGraphicalText ("2. You must manage your material resources: stellar reserves and energy.", new Font ("Consolas", Font.PLAIN, 20), Color.GREEN, 10, 170);
+	displayGraphicalText ("2. You must manage your material resources: stellar reserves and energy. Resources update every 10 seconds.", new Font ("Consolas", Font.PLAIN, 20), Color.GREEN, 10, 170);
 	displayGraphicalText ("3. You must also manage your human resources: soldiers, workers, and doctors.", new Font ("Consolas", Font.PLAIN, 20), Color.GREEN, 10, 205);
 	displayGraphicalText ("4. Soldiers will help you conquer new regions.", new Font ("Consolas", Font.PLAIN, 20), Color.GREEN, 10, 240);
 	displayGraphicalText ("5. Workers will increase your production of material resources.", new Font ("Consolas", Font.PLAIN, 20), Color.GREEN, 10, 275);
@@ -263,6 +271,7 @@ public class Gleb
 	// Set the text color, background color, and font for the console to match our game theme
 	c.setTextBackgroundColor (Color.BLACK);
 	c.setTextColor (Color.WHITE);
+	c.setColor(Color.BLACK);
 
 	customFont = null;
 
@@ -292,17 +301,17 @@ public class Gleb
 	maxWidth = 0;
 
 	String output_lines[] = {
-	    "Stellar Reserves: " + resourceCounter [0] + " MT",
-	    "Energy: " + resourceCounter [1] + " GJ",
+	    "Stellar Reserves [MT]: " + resourceCounter [0],
+	    "Energy [GJ]: " + resourceCounter [1],
 	    "Population: " + peopleCounter [0] + peopleCounter [1] + peopleCounter [2] + peopleCounter [3],
 	    "Unemployed: " + peopleCounter [0],
 	    "Workers: " + peopleCounter [1],
 	    "Soldiers: " + peopleCounter [2],
 	    "Doctor: " + peopleCounter [3],
 	    "Population Capacity: " + populationCaps [currentRegion],
-	    "Stellar Reserves Production Rate: " + stellar_reserves_production_rate + " MT/s",
-	    "Energy Production Rate: " + energy_production_rate + " GJ/s",
-	    "Population Growth Rate: " + population_growth_rate + " people/s"
+	    "Stellar Reserves Production Rate [MT/s]: " + stellar_reserves_production_rate,
+	    "Energy Production Rate [GJ/s]: " + energy_production_rate,
+	    "Population Growth Rate [people/s]: " + population_growth_rate
 	    };
 
 	for (int i = 0 ; i < output_lines.length ; i++)
@@ -310,27 +319,26 @@ public class Gleb
 
 	// Construct the dash string using an algorithm that dynamically adjusts to the max width
 	String dashes = repeat ("-", Math.max (5, (maxWidth - 20 + maxWidth % 2) / 2) + 1);
+	displayGraphicalText(dashes + " MATERIAL RESOURCES " + dashes, new Font ("Consolas", Font.BOLD, 20), Color.YELLOW, 10, 150);
+	displayGraphicalText(output_lines[0], new Font ("Consolas", Font.PLAIN, 20), Color.GREEN, 10, 180);
+	displayGraphicalText(output_lines[1], new Font ("Consolas", Font.PLAIN, 20), Color.GREEN, 10, 210);
 
-	c.println (dashes + " MATERIAL RESOURCES " + dashes);
-	c.println (output_lines [0]);
-	c.println (output_lines [1]);
+	displayGraphicalText(dashes + "-- HUMAN RESOURCES --" + dashes, new Font ("Consolas", Font.BOLD, 20), Color.YELLOW, 10, 240);
+	displayGraphicalText(output_lines[2], new Font ("Consolas", Font.PLAIN, 20), Color.GREEN, 10, 270);
+	displayGraphicalText(output_lines[3], new Font ("Consolas", Font.PLAIN, 20), Color.GREEN, 10, 300);
+	displayGraphicalText(output_lines[4], new Font ("Consolas", Font.PLAIN, 20), Color.GREEN, 10, 330);
+	displayGraphicalText(output_lines[5], new Font ("Consolas", Font.PLAIN, 20), Color.GREEN, 10, 360);
+	displayGraphicalText(output_lines[6], new Font ("Consolas", Font.PLAIN, 20), Color.GREEN, 10, 390);
 
-	c.println (dashes + "-- HUMAN RESOURCES -" + dashes);
-	c.println (output_lines [2]);
-	c.println (output_lines [3]);
-	c.println (output_lines [4]);
-	c.println (output_lines [5]);
-	c.println (output_lines [6]);
+	displayGraphicalText(dashes + "-- LIMITS & RATES --" + dashes, new Font ("Consolas", Font.BOLD, 20), Color.YELLOW, 10, 420);
+	displayGraphicalText(output_lines[7], new Font ("Consolas", Font.PLAIN, 20), Color.GREEN, 10, 450);
+	displayGraphicalText(output_lines[8], new Font ("Consolas", Font.PLAIN, 20), Color.GREEN, 10, 480);
+	displayGraphicalText(output_lines[9], new Font ("Consolas", Font.PLAIN, 20), Color.GREEN, 10, 510);
+	displayGraphicalText(output_lines[10], new Font ("Consolas", Font.PLAIN, 20), Color.GREEN, 10, 540);
 
-	c.println (dashes + "-- LIMITS & RATES --" + dashes);
-	c.println (output_lines [7]);
-	c.println (output_lines [8]);
-	c.println (output_lines [9]);
-	c.println (output_lines [10]);
-
-	c.print ("_________________________________________________________\n\nTime: ");
-	c.print (seconds_past, 2, 1);
-	c.println (" s\n");
+	displayGraphicalText("____________________________________________", new Font ("Consolas", Font.PLAIN, 20), Color.GREEN, 10, 570);
+	displayGraphicalText("Time [S]: ", new Font ("Consolas", Font.PLAIN, 20), Color.WHITE, 10, 610);
+	displayGraphicalText(getRoundedDouble(seconds_past), new Font ("Consolas", Font.BOLD, 20), Color.BLACK, 115, 611);
     }
 
     public static void displayPopulation ()
@@ -381,7 +389,7 @@ public class Gleb
 	displayRules ();
 	c.getChar ();
 	// clear console
-	for (int i = 0 ; i < 28 ; i++)
+	for (int i = 0 ; i < 29 ; i++)
 	{
 	    c.println ();
 	    try
@@ -399,8 +407,13 @@ public class Gleb
 
     public static void mainMenu ()
     {
-
-	c.setCursor (6, 1);
+	if (iterations % 100 == 0 || image_not_shown) {
+		c.clear();
+		displayBackgroundImage("Assets/planet.png");
+		image_not_shown = false;
+	} else {
+		c.clearRect(112, 593, 40 + 10*((int) Math.log10(seconds_past)), 23);
+	}
 	displayHeader("Main Menu", "[P] - Population Menu | [M] - Region Map");
 	
 	displayValues ();
@@ -482,7 +495,6 @@ public class Gleb
 	    }
 	}
     }
-
 
     public static void regionMap ()
     {
@@ -592,9 +604,8 @@ public class Gleb
     public static void shortTick ()
     {
 	stellar_reserves_production_rate = peopleCounter [1] * 0.1 + 0.1; // workers * 0.1 = rate
-	energy_production_rate = peopleCounter [1] * 10; // workers * 5 = GJ/s
+	energy_production_rate = peopleCounter [1] * 5; // workers * 5 = GJ/s
 	population_growth_rate = peopleCounter [3] * 0.1 + 0.1; // base rate of 0.1 plus 0.1 for every doctor
-	resourceCounter [1] += energy_production_rate / 10;
     }
 
 
@@ -604,6 +615,7 @@ public class Gleb
 
 	resourceCounter [0] += stellar_reserves_production_rate * 10;
 	peopleCounter [0] += population_growth_rate * 10;
+	resourceCounter [1] += energy_production_rate * 10;
 	finalPopulation = peopleCounter [0] + peopleCounter [1] + peopleCounter [2] + peopleCounter [3];
 	if (finalPopulation > populationCaps [currentRegion])
 	{
@@ -630,8 +642,9 @@ public class Gleb
 		nameMenu ();
 	    else if (currentMenu == 2)
 		rulesMenu ();
-	    else if (currentMenu == 3)
-		mainMenu ();
+	    else if (currentMenu == 3) {
+			mainMenu ();
+		}
 	    else if (currentMenu == 4)
 		populationMenu ();
 	    else if (currentMenu == 5)
