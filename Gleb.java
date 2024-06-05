@@ -42,7 +42,7 @@ public class Gleb
 
     // Game rates
     static double stellar_reserves_production_rate, energy_production_rate, population_growth_rate;
-	static long switchCost = 1000;
+	static long switchCost = 600;
 
     /**
      * 0 - Start menu
@@ -643,6 +643,8 @@ public class Gleb
 	    else if (currentMenu == 2)
 		rulesMenu ();
 	    else if (currentMenu == 3) {
+			c.clear();
+			displayBackgroundImage("Assets/planet.png");
 			mainMenu ();
 		}
 	    else if (currentMenu == 4)
