@@ -93,3 +93,20 @@ Population menu:
 Planet map:
 - Map of all the planets
 - Prompts the user to enter if they would like to conquer the next planet
+
+# Docs
+## Ticks
+Short tick (0.1s)
+- update rates (i.e population growth rate, which is tied to number of doctors)
+- random chance to have a gift/attack
+
+Long tick (10s)
+- update 
+
+# jerry li's suggestion
+jerry li make very suggestive noise
+he suggests that we make something that the player can do while they wait for their resources
+so basically we have a mine menu and you can every 5 seconds press m to mine and get 1% of the stellar reserves required for the next planet
+and the 5 seconds only counts down when you are actually in the menu so that
+- easier to code
+- the ostensible reason is that "the workers only work when you are watching them"
