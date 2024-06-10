@@ -105,8 +105,23 @@ Long tick (10s)
 
 # jerry li's suggestion
 jerry li make very suggestive noise
+
 he suggests that we make something that the player can do while they wait for their resources
+
 so basically we have a mine menu and you can every 5 seconds press m to mine and get 1% of the stellar reserves required for the next planet
+
 and the 5 seconds only counts down when you are actually in the menu so that
 - easier to code
 - the ostensible reason is that "the workers only work when you are watching them"
+
+# jerry li's suggestion #2
+jerry li continues making suggestive noises
+
+he then suggests that we make the instructions better
+
+Instructions:
+1. This is an idle game where you will manage your space empire's resources to conquer new planets.
+2. You have human resources (workers, soldiers, doctors) and materials (energy, stellar reserves).
+3. Workers create stellar reserves and energy, and doctors increase the rate of population growth.
+4. Your goal is to conquer new planets, but that will cost materials
+5. Only the true empire builder has the dedication to reach the famed Awajiba planet.
