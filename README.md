@@ -14,7 +14,7 @@ Exoplanet Empire is a text-based idle game where players manage and expand a spa
 
 ### Prerequisites
 
-This project uses the HSA.Console library, originally designed for the Ready to Program with Java IDE. However, it is recommended to use a modern IDE for better support and user experience. The HSA folder is included.
+This project uses the HSA.Console library, originally designed for the Ready to Program with Java IDE. However, it is recommended to use a modern IDE for better support and user experience. The HSA folder is included as a zip file.
 
 ### Recommended Setup
 
