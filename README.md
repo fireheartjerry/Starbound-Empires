@@ -2,6 +2,8 @@
 
 **ICS3UP Summative: A Text-Based, Idle, Space Expansion Game**
 
+## Final Mark: 100%
+
 ----
 
 ## Overview
