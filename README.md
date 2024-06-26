@@ -12,7 +12,7 @@ Exoplanet Empire is a text-based idle game where players manage and expand a spa
 
 ### Prerequisites
 
-This project uses the HSA.Console library, originally designed for the Ready to Program with Java IDE. However, it is recommended to use a modern IDE for better support and user experience.
+This project uses the HSA.Console library, originally designed for the Ready to Program with Java IDE. However, it is recommended to use a modern IDE for better support and user experience. The HSA folder is included.
 
 ### Recommended Setup
 
@@ -32,7 +32,7 @@ This project uses the HSA.Console library, originally designed for the Ready to 
 
 1. Clone this repository to your local machine:
    ```bash
-   git clone https://github.com/yourusername/Exoplanet-Empire.git
+   git clone https://github.com/yourusername/Starbound-Empires.git
    ```
 
 2. Open the project in your chosen IDE.
