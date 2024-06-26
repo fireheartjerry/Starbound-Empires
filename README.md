@@ -43,6 +43,8 @@ This project uses the HSA.Console library, originally designed for the Ready to 
 
 4. Run the main program file to start playing Starbound Empires.
 
+5. The soundtrack is not included because of its large file size.
+
 ## License
 
 This project is licensed under the MIT License. See the [LICENSE](LICENSE) file for more details.
