@@ -1,917 +1,1224 @@
-import hsa.Console;
-import java.awt.Font;
-import java.awt.Color;
-import java.awt.FontFormatException;
-import java.awt.Image;
-import java.io.File;
-import java.io.InputStream;
-import java.io.IOException;
-import java.io.FileInputStream;
-import javax.imageio.ImageIO;
-import javax.sound.sampled.AudioFormat;
-import javax.sound.sampled.AudioInputStream;
-import javax.sound.sampled.AudioSystem;
-import javax.sound.sampled.Clip;
-import javax.sound.sampled.DataLine;
-import javax.sound.sampled.FloatControl;
-import javax.sound.sampled.LineUnavailableException;
-import javax.sound.sampled.SourceDataLine;
-import javax.sound.sampled.UnsupportedAudioFileException;
+// Imports
+import java.awt.*; // Fonts and colors
+import java.io.*; // Reading files (such as image and audio files)
+import javax.sound.sampled.*; // Play sounds
+
+
+import hsa.Console; // Console
+import javax.imageio.ImageIO; // Processing images
+import java.text.DecimalFormat; // Rounding decimals
+import java.lang.Math; // Math functions
+
 
 public class Main {
-    static Console c; // HSA Console
+    // The HSA console from the very beginning! Hello from the past!
+    static Console c;
+   
+    // Font and image variables
+    static Font customFont; // The custom font to be used to display fancy text
+    static Image background1, background2; // The two background images
+    static SourceDataLine effectSourceLine, musicSourceLine; // Stores data lines of audio files and acts as a source to the mixer
+    static AudioInputStream effectAudioStream, musicAudioStream; // An array of bytes that represents audio input data
+    static DataLine.Info effectInfo, musicInfo; // Additional information on the SourceDataLine that represents audio formatting
+
+
+    // Game variables, values will be set later, except for the arrays
+    static long iterations, // The number of frames since the start of the game
+		switchCost; // The cost to switch professions
+
+
+    static int iterationsSinceLastCollect, // The number of frames since the last mine collection
+	       currentRegion, // The current region the player is in
+	       mineLevel, // The current level of the mine
+	       developerMultiplier, // The multiplier for debug mode
+	       currentMenu; // The current menu the player is in
+
+
+    /**
+     * 0 - Start menu
+     * 1 - Select name menu
+     * 2 - Rules menu
+     * 3 - Main menu
+     * 4 - Population menu
+     * 5 - Regions map
+    */
+
+
+    static int[] peopleCounter = {0, 1, 0, 0}, // The number of people in each profession
+		 resourceCounter = {0, 0}; // The amount of each resource
+
+
+    static double secondsPast, // The number of seconds since the start of the game
+		  stellarReservesProductionRate, // The rate of stellar reserve production
+		  energyProductionRate, // The rate of energy production
+		  populationGrowthRate; // The rate of population growth
+
+
+    static String musicPath, // The path to the background music
+		  colonyName; // The name of the colony that the user inputs
+   
+    static boolean imageNotShown, // A boolean that checks if the main menu image has been shown
+		   first, // A boolean that checks if a value is being inputted for the first time
+		   debug; // A boolean that checks if debug mode is enabled
+   
+    // Game constants, value is initially given
+    static final long[] mineCollectionTimes = {75, 71, 67, 63, 59, 55, 51, 47, 43, 39, 35}, // The time in ms it takes to collect resources from the mines
+
+
+		       soldiersNeeded = {0, 0, 0, 0, 0, 0, 0, 500, 1000, 5000, 10000, 12000, 20000, 25000, 33000, 40000, 55000, 60000, 65000}, // The number of soldiers needed to conquer each region
+
+
+		       reservesNeeded = {0, 0, 50, 300, 1000, 5000, 10000, 50000, 100000, 500000, 1000000, 2000000, 3000000, 4000000, 6000000, 10000000, 20000000, 40000000, 694200000}, // The number of stellar reserves needed to conquer each region
+
+
+		       populationCaps = {10, 20, 40, 80, 200, 300, 1000, 3000, 10000, 15000, 20000, 30000, 40000, 50000, 60000, 80000, 80000, 1000000}, // The population capacity of each region
+
+
+		       mineUpdateReservesNeeded = {0, 50, 250, 1000, 3500, 10000, 50000, 350000, 1000000, 5000000, 25000000}, // The number of stellar reserves needed to upgrade the mines
+
+
+		       mineUpdateEnergyNeeded = {0, 500, 2500, 7500, 30000, 150000, 500000, 2500000, 7500000, 25000000, 150000000}; // The amount of energy needed to upgrade the mines
+
+
+    static final double[] regionMineMultipliers = {1.0, 1.25, 1.5, 1.75, 2.0, 2.5, 3.0, 3.5, 4.0, 4.5, 5.0, 6.0, 7.0, 8.0, 9.0, 10.0, 11.0, 12.0}; // The multiplier for the mine production rate of each region
+
+
+    static final String[] professionNames = {"Unemployed", "Worker", "Soldier", "Doctor"}, // The names of the professions
+
+
+			  resourceNames = {"Stellar Reserve", "Energy"}, // The names of the resources
+
+
+			  regionNames = {"Earth", "Mars", "Asteroid belt", "Jupiter", "Saturn", "Uranus", "Oort cloud", "Planet X", "Proxima Centauri B", "Ross 128b", "Hoth", "SPAS-12", "Gliese x7x", "Groza-S", "Agamar", "Wayland", "SR-25", "Awajiba"}, // The names of the regions
+
+
+			  mineTierNames = {"Basic", "Advanced", "Thriving", "Industrial", "Global", "Interstellar", "Universal", "Cosmic", "Ethereal", "Omega", "Awajiba"}, // The names of the mine tiers
+		       
+			  successfullConquerMessages = { // The messages displayed when a region is conquered
+			    "",
+		   
+			    "Your exploratory fleet lands on Mars, unlocking the second pillar of human existence. The red planet, rich with iron oxides, now bows to your dominion. The mineral-laden Martian soil yields to your advanced mining techniques, boosting your resources significantly.",
+		   
+			    "Your fleet ventures into the asteroid belt, a glittering treasure trove of minerals and resources. Each asteroid, a dormant giant of wealth, now falls under your control. Your mining operations thrive amidst the cosmic debris, transforming the raw ore into invaluable assets.",
+		   
+			    "Your fleet arrives at Jupiter, the colossal gas giant. Beneath its turbulent clouds and swirling storms lies a realm of untapped potential. With Jupiter under your command, your mining ventures delve deep into its metallic hydrogen core, harvesting unimaginable riches.",
+		   
+			    "Your fleet navigates through the majestic rings of Saturn, the enigmatic gas giant. The planet's ethereal beauty hides a wealth of resources now under your control. Enhanced mining techniques unlock the secrets of Saturn's rings, yielding a bounty of precious minerals. It's many moons now expand your population capacity and reach.",
+		   
+			    "Your fleet breaches the icy atmosphere of Uranus, the famous ice giant. This distant world, veiled in mystery, now answers to your might. Your mining operations penetrate its frigid depths, extracting rare elements and compounds to fuel your empire.",
+		   
+			    "Your fleet reaches the Oort Cloud, a distant frontier of icy planetesimals and celestial wanderers. This cosmic expanse, on the edge of the solar system, now submits to your authority after you conquer it. Your mining fleets capture and harvest the ancient icy bodies, securing vast amounts of resources from the fallen defenders.",
+		       
+			    "Your fleet uncovers the enigmatic Planet X, shrouded in myth and mystery on the solar system's outermost fringe. The dark and forbidding surface, once guarded by hostile extraterrestrial beings, is now conquered. Your mining operations reveal rare and unknown minerals amidst the ruins of alien fortresses, bolstering your empire's wealth.",
+			   
+			    "Your fleet ventures to Proxima Centauri B, an alien world in the Alpha Centauri system. This distant planet, bathed in the light of a foreign sun, now falls under your command after a decisive event. Your mines tap into its rich mineral veins, enhancing your resource reserves exponentially from the conquered land.",
+			   
+			    "Your fleet reaches Ross 128b, a planet orbiting the red dwarf star Ross 128. Amidst its rocky terrain and crimson skies, your dominion extends following several exploratory expansions. Advanced mining technology extracts the planet's abundant resources.",
+			   
+			    "Your fleet arrives on Hoth, a frozen wasteland in a galaxy far, far away. You conquer the harsh climate and icy surface. Your mines delve deep into the frozen crust, uncovering precious resources buried beneath the perpetual snow and ice, remnants of a bygone alien civilization.",
+			   
+			    "Your fleet lands on SPAS-12, a planet in a parallel universe, its reality intertwined with your own. After landing on the surface and building reality-anchoring settlements, the planet's alien landscape is now under your control. Your advanced mining operations unearth bizarre and valuable materials, augmenting your empire's wealth.",
+			   
+			    "Your fleet explores Gliese x7x, a distant world within the vast Gliese system. The planet's unique geological formations now hold untold riches under your dominion. After a mission, your mining operations extract exotic minerals from the ancient alien strongholds, significantly boosting your resource base.",
+			   
+			    "Your fleet secures Groza-S, a planet in the tempestuous Groza Nebula, a region teeming with volatile storms and alien lifeforms. Amidst its storm-ravaged surface, your control brings order after a diplomatic meeting with the alien species. Your mining technology harnesses the planet's volatile resources, transforming them into invaluable assets for your empire.",
+			   
+			    "Your fleet arrives on Agamar, a planet steeped in lore within the transdimensional Agamar Cluster. The ancient world, now under your rule after a swift conquest, reveals its hidden treasures. Advanced mining techniques unearth rich deposits of rare minerals and alien artifacts, enhancing your empire's wealth from the mysterious land.",
+			   
+			    "Your fleet lands on Wayland, a planet existing simultaneously in multiple realities within the Wayland Nexus. The planet's diverse landscapes and hidden caverns, are now yours to explore after a series of dangerous landings. Your mining operations tap into vast mineral reserves, fortifying your resource base while navigating the complexities of its parallel dimensions.",
+			   
+			    "Your fleet reaches SR-25, a planet orbiting a distant star in the SR-25 Expanse, an area known for its rich history of alien culture. Its rugged terrain and harsh conditions fall under your dominion after a swift landing and recon mission. Your advanced mining technology extracts valuable resources from its core, bolstering your empire's strength.",
+			   
+			    "Your fleet reaches Awajiba, a planet of legend in the Awajiba Continuum, a realm where the boundaries between realities blur. The planet's ethereal beauty and untold mysteries now bow to your might after you the various time crystals surrounding it. Your mines delve deep into its enchanted crust, unearthing resources of unparalleled value and mystical properties. The whispers of Awajiba's ancient secrets and alien knowledge now serve your empire, marking an ultimate turning point in your cosmic conquest. The black hole at the heart of the Awajiba Continuum beckons, promising untold power and peril for those who dare to venture into its depths."
+			},
+		       
+			failedConquerMessages = { // The messages displayed when a region is failed to be conquered
+			    "",
+		       
+			    "Your exploratory fleet lands on Mars, but the harsh Martian environment and unknown alien threats prove insurmountable. The red planet remains unconquered, its mineral riches beyond your grasp. Your fleet retreats, bearing the scars of a failed mission.",
+		       
+			    "Your fleet ventures into the asteroid belt, but the treacherous conditions and unpredictable trajectories of asteroids thwart your efforts. The glittering trove of minerals remains out of reach as your mining operations falter and withdraw.",
+		       
+			    "Your fleet arrives at Jupiter, but the colossal gas giant's extreme weather and unseen dangers defeat your attempts. The potential riches within its core elude you as your fleet is forced to abandon the mission.",
+		       
+			    "Your fleet navigates through the rings of Saturn, but the planet's mysterious beauty conceals perilous threats. Toxic fumes and absolute zero temperatures overwhelm your fleet, leaving Saturn's resources untouched and your forces in retreat.",
+		       
+			    "Your fleet breaches the icy atmosphere of Uranus, only to face overwhelming challenges from the planet's harsh climate and sharp diamond rain. The mission fails, and your fleet withdraws, unable to tap into its rare elements.",
+		       
+			    "Your fleet reaches the Oort Cloud, but the hypersonic metears destroy your spaceships. The icy bodies and their resources remain under the control of the guardians as your fleet retreats.",
+		       
+			    "Your fleet uncovers the enigmatic Planet X, but the endless volcanos and volatile geological activity prove too formidable. The exploratory missions end in failure, and your mining operations never commence. Planet X remains a distant and unreachable myth.",
+		       
+			    "Your fleet ventures to Proxima Centauri B, but they run out of fuel halfway through. Due to an extremely silly mistake in calculations (21-9 = 11), your fleet withdraws, leaving the planet's mineral veins untapped.",
+		       
+			    "Your fleet reaches Ross 128b, but the lack of gravity throws off the landings. Amidst the rocky terrain and crimson skies, your spaceships crash, leaving the planet's resources unused.",
+		       
+			    "Your fleet arrives on Hoth, but the extreme climate and absolute zero temperatures thwart your conquest. The frozen wasteland remains unconquered, its precious resources buried beneath perpetual snow and ice, beyond your reach.",
+		       
+			    "Your fleet lands on SPAS-12, but the planet's various wormholes teleport your fleet back to Hoth. The alien landscape remains unconquered as your fleet looks at Hoth in confusion, unable to comprehend what happened.",
+		       
+			    "Your fleet explores Gliese x7x, but the radiation belts corrupt your computers. The unique geological formations and their untold riches remain untouched as your fleet withdraws.",
+		       
+			    "Your fleet secures Groza-S, but the volatile storms and mini black-holes prove too much. The tempestuous planet's resources remain inaccessible as your forces retreat.",
+		       
+			    "Your fleet arrives on Agamar, but the landing site was badly picked and the spaceships fell into a neutron star. Your advanced mining techniques falter and the remnants your fleet retreat.",
+		       
+			    "Your fleet lands on Wayland, but the quasars and pulsars melt your spaceships due to a lack of heat-resistant material. The diverse landscapes and hidden caverns remain unexplored as your fleet retreats, unable to tap into its vast mineral reserves.",
+		       
+			    "Your fleet reaches SR-25, but the relativistic 7.62mm rocks pierce the hulls of your fleet. The planet's natural phenomena and harsh conditions remain unyielding as your advanced mining technology is rendered useless.",
+		       
+			    "Your fleet reaches Awajiba, but the infamous black hole sucks in a large portion of your fleet. Your scientists watch in despair as the ships approach nothingness, and the survivors are all teleported back to SR-25."
+			};
+
 
     /************************ HELPER FUNCTIONS ************************/
-    public static void displayGraphicalText(String message, Font font, Color col, int x, int y) {
-        c.setFont(font);
-        c.setColor(col);
-        c.drawString(message, x, y);
-    }
+    // Function that displays graphical text on the console, with the message, font, color, x position, and y position as parameters
+    public static void displayGraphicalText(String message, Font font, Color fontColor, int xPos, int yPos) {
+	c.setFont(font); // Set the font to the custom font
+	c.setColor(fontColor); // Set the color to the specified color
+	c.drawString(message, xPos, yPos); // Draw the graphical text on the console to the specified position
+    } // end of displayGraphicalText
 
-    public static void displayBackgroundImage(String path) {
-        Image picture = null;
-        try {
-            picture = ImageIO.read(new File(path));
-        } catch (IOException e) {
-            e.printStackTrace();
-            System.err.println("There was an I/O error when reading the background image file.");
-        }
-        c.drawImage(picture, 0, 0, null);
-    }
 
-    public static String repeat(String s, long n) {
-        String result = "";
-        for (int i = 0; i < n; i++)
-            result += s;
-        return result;
-    }
+    // Function that pauses the program for a variable amount milliseconds, used for delaying the program execution for various purposes such as framerate and slow printing
+    public static void sleep(int sleepTimeMs) {
+	// Try catch block to catch any exceptions that may occur when the thread is sleeping
+	try {
+	    Thread.sleep(sleepTimeMs); // Pause the program for the specified amount of milliseconds
+	} catch (InterruptedException error) {
+	    error.printStackTrace();
+	}
+    } // end of sleep
 
-    public static void printPadRight(String s, int n) {
-        c.print(s + repeat(" ", n - s.length()));
-    }
 
-    public static boolean randomEvent(double chance) {
-        return Math.random() < chance;
-    }
+    // Function that prints a string character by character with a delay of 50ms, for added suspense and user experience
+    public static void slowPrint(String message) {
+	// Loop through each character in the message
+	for (int i = 0; i < message.length(); i++) {
+	    c.print(message.charAt(i)); // Print the character
+	    sleep(50); // Pause program for 50ms
+	}
+    } // end of slowPrint
 
-    public static void clearRow(int row) {
-        c.setCursor(row, 1);
-        c.print(repeat(" ", c.getMaxColumns()));
-    }
 
+    // A helper function that repeats a string s n times, used for dynamic printing of dashes
+    public static String repeat (String repeatStr, long repetitions) {
+	String result = ""; // Initialize an empty string
+	for (int i = 0 ; i < repetitions; i++)
+	    result += repeatStr; // Append the string s to the result n times
+
+
+	// Return the result string
+	return result;
+    } // end of repeat
+
+
+    // A helper function that reads an integer from the user, and ensures that it is within the range [lowerBound, upperBound], with proper invalid checks
+    public static int inputNumber (int lowerBound, int upperBound) {
+	int inputNum; // Initialize the input number variable
+	// INPUT and PROCESSING model
+	do { // Loop until a valid input is received, we use a do-while loop to ensure that the loop runs at least once
+	    // Try to read an integer from the user, and catch any exceptions that may occur (these exceptions are thrown when the user does not input an integer)
+	    try {
+		// Read an integer from the user and check if it is within the specified range
+		inputNum = c.readInt();
+		if (inputNum < lowerBound || inputNum > upperBound)
+		    c.println("Invalid input. Must be between " + lowerBound + " and " + upperBound);
+	    } catch (NumberFormatException error) {
+		// Notify the user that their input is invalid
+		c.println("Invalid input. Must be an integer.");
+		inputNum = lowerBound - 1;
+	    }
+	} while (inputNum < lowerBound || inputNum > upperBound);
+
+
+	// Return the valid input number
+	return inputNum;
+    } // end of inputNumber
+
+
+    // Function that handles generic audio errors by displaying an error message and exiting the program
+    public static void handleAudioError() {
+	c.clear(); // Clear the console
+	// Display an error message to the user, informing them of the audio error and how to resolve it, this would be an OUTPUT model
+	c.println("There was an error while playing the audio. It is recommended to exit the program and ensure that the following audio files are located in the Assets folder:\n- menuswitch.wav\n- success.wav\n- mine.wav\n\nAlternatively, you can continue the program but audio won't be played, and this error message will keep popping up.\n\nPress any key to continue the program.");
+	c.getChar(); // Wait for the user to press a key before continuing the program
+    } // end of handleAudioError
+
+
+    /************************ GAME FUNCTIONS ************************/
+    // Basic function for playing an audio with path soundPath
+    public static void playGameEffect(String soundPath) {
+	// Declare variables for the audio stream, data line, and volume control
+	FloatControl volumeControl;
+
+
+	// Close the previous audio stream and data line if they exist by setting them to null
+	effectAudioStream = null;
+	effectSourceLine = null;
+	effectInfo = null;
+	volumeControl = null;
+
+
+	// Load the audio file, create a data line, and set the volume, with proper error handling
+	try {
+	    // Load the audio file and get the audio stream and data line information
+	    effectAudioStream = AudioSystem.getAudioInputStream(new File(soundPath));
+	    effectInfo = new DataLine.Info(SourceDataLine.class, effectAudioStream.getFormat());
+
+
+	    // Intialize source lines
+	    effectSourceLine = (SourceDataLine) AudioSystem.getLine(effectInfo);
+	    effectSourceLine.open(effectAudioStream.getFormat());
+
+
+	    // Change voume
+	    volumeControl = (FloatControl) effectSourceLine.getControl(FloatControl.Type.MASTER_GAIN);
+	    volumeControl.setValue(-25.0f);
+	} catch (UnsupportedAudioFileException e) {
+	    handleAudioError();
+	} catch (LineUnavailableException e) {
+	    handleAudioError();
+	} catch (IOException e) {
+	    handleAudioError();
+	}
+
+
+	// Play the audio file in a new thread to prevent program execution blocking
+	new Thread(new Runnable() {
+	    public void run() {
+		try {
+		    // Initialize variables for reading the audio file and writing to the data line
+		    int bytesRead = 0;
+		    effectSourceLine.start();
+		    byte[] buffer = new byte[4096];
+
+
+		    // Read the audio file and write it to the data line
+		    while (bytesRead != -1) {
+			// Read the audio file and write it to the data line, stopping when the audio file has finished playing
+			bytesRead = effectAudioStream.read(buffer, 0, buffer.length);
+			if (bytesRead >= 0)
+			    effectSourceLine.write(buffer, 0, bytesRead);
+		    }
+
+
+		    // Close the audio stream and data line after the audio file has finished playing to prevent memory leaks
+		    effectSourceLine.drain();
+		    effectSourceLine.close();
+		    effectAudioStream.close();
+		} catch (IOException error) {
+		    handleAudioError();
+		}
+	    }
+	}).start();
+    } // end of playGameEffect
+
+
+    // Play the background music, this may look similar to playGameEffect() at first, but due to the background music needing looping, while effects do not, so modifications are needed, therefore a seperate function is required. The contents are mostly the same, but an additional while loop and logic is added. Note that the user cannot specify the audio path as well
     public static void playBackgroundMusic() {
-        Thread musicThread = new Thread(new Runnable() {
-            public void run() {
-                AudioInputStream audioStream = null;
-                try {
-                    File audioFile = new File(musicPath);
-                    if (!audioFile.exists()) {
-                        System.err.println("Audio file not found: " + musicPath);
-                        return;
-                    }
+	// Declare variables for the audio stream, data line, and volume control
+	FloatControl volumeControl;
 
-                    audioStream = AudioSystem.getAudioInputStream(audioFile);
-                    AudioFormat audioFormat = audioStream.getFormat();
-                    DataLine.Info info = new DataLine.Info(SourceDataLine.class, audioFormat);
-                    SourceDataLine sourceLine = (SourceDataLine) AudioSystem.getLine(info);
-                    sourceLine.open(audioFormat);
-                    FloatControl volumeControl = (FloatControl) sourceLine.getControl(FloatControl.Type.MASTER_GAIN);
-                    volumeControl.setValue(-20.0f);
-                    sourceLine.start();
 
-                    byte[] buffer = new byte[4096];
-                    int bytesRead = 0;
+	// Close the previous audio stream and data line if they exist
+	musicAudioStream = null;
+	musicSourceLine = null;
+	musicInfo = null;
+	volumeControl = null;
 
-                    while (running) {
-                        while ((bytesRead = audioStream.read(buffer, 0, buffer.length)) != -1) {
-                            sourceLine.write(buffer, 0, bytesRead);
-                        }
-                        audioStream = AudioSystem.getAudioInputStream(audioFile);
-                    }
 
-                } catch (UnsupportedAudioFileException e) {
-                    System.err.println("The specified audio file format is not supported.");
-                    e.printStackTrace();
-                } catch (LineUnavailableException e) {
-                    System.err.println("Audio line for playing back is unavailable.");
-                    e.printStackTrace();
-                } catch (IOException e) {
-                    System.err.println("Error playing the audio file.");
-                    e.printStackTrace();
-                } finally {
-                    try {
-                        if (audioStream != null) {
-                            audioStream.close();
-                        }
-                    } catch (IOException e) {
-                        e.printStackTrace();
-                    }
-                }
-            }
-        });
+	// Load the audio file, create a data line, and set the volume, with proper error handling
+	try {
+	    // Load the audio file and get the audio stream and data line information
+	    musicAudioStream = AudioSystem.getAudioInputStream(new File("Assets/soundtrack.wav"));
+	    musicInfo = new DataLine.Info(SourceDataLine.class, musicAudioStream.getFormat());
 
-        musicThread.start();
-    }
 
-    public static void playGameSound(String soundPath) {
-        AudioInputStream audioStream = null;
-        try {
-            File audioFile = new File(soundPath);
-            if (!audioFile.exists()) {
-                System.err.println("Audio file not found: " + soundPath);
-                return;
-            }
+	    // Initialize source lines
+	    musicSourceLine = (SourceDataLine) AudioSystem.getLine(musicInfo);
+	    musicSourceLine.open(musicAudioStream.getFormat());
 
-            // Get an audio input stream from the file
-            audioStream = AudioSystem.getAudioInputStream(audioFile);
 
-            // Get the audio format
-            AudioFormat audioFormat = audioStream.getFormat();
+	    // Change volume
+	    volumeControl = (FloatControl) musicSourceLine.getControl(FloatControl.Type.MASTER_GAIN);
+	    volumeControl.setValue(-7.65f);
+	} catch (UnsupportedAudioFileException e) {
+	    handleAudioError();
+	} catch (LineUnavailableException e) {
+	    handleAudioError();
+	} catch (IOException e) {
+	    handleAudioError();
+	}
 
-            // Get a data line info object for the SourceDataLine
-            DataLine.Info info = new DataLine.Info(SourceDataLine.class, audioFormat);
 
-            // Get a SourceDataLine
-            SourceDataLine sourceLine = (SourceDataLine) AudioSystem.getLine(info);
-            sourceLine.open(audioFormat);
-            sourceLine.start();
+	// Play the audio file in a new thread to prevent program execution blocking
+	new Thread(new Runnable() {
+	    public void run() {
+		try {
+		    int bytesRead = 0;
+		    musicSourceLine.start();
+		    byte[] buffer = new byte[4096];
 
-            // Buffer for reading the audio data
-            byte[] buffer = new byte[4096];
-            int bytesRead = 0;
 
-            // Continuously read and write audio data
-            while ((bytesRead = audioStream.read(buffer, 0, buffer.length)) != -1) {
-                sourceLine.write(buffer, 0, bytesRead);
-            }
-            audioStream = AudioSystem.getAudioInputStream(audioFile);
-            
+		    // Here is the additional while loop that checks if the audio file has finished playing, and if so, restarts it
+		    while (true) {
+			// Read the audio file and write it to the data line
+			bytesRead = musicAudioStream.read(buffer, 0, buffer.length);
+			if (bytesRead >= 0)
+			    musicSourceLine.write(buffer, 0, bytesRead);
+			else {
+			    // If the audio file has finished playing, restart it by closing the data line and audio stream, and then reopening them
+			    musicAudioStream = AudioSystem.getAudioInputStream(new File("Assets/soundtrack.wav"));
+			    musicSourceLine.drain();
+			    musicSourceLine.close();
+			    musicSourceLine = (SourceDataLine) AudioSystem.getLine(musicInfo);
+			    musicSourceLine.open(musicAudioStream.getFormat());
+			    musicSourceLine.start();
+			}
+		    }
+		} catch (IOException e) {
+		    handleAudioError();
+		} catch (LineUnavailableException e) {
+		    handleAudioError();
+		} catch (UnsupportedAudioFileException e) {
+		    handleAudioError();
+		}
+	    }
+	}).start();
+    } // end of playBackgroundMusic
 
-        } catch (UnsupportedAudioFileException e) {
-            System.err.println("The specified audio file format is not supported.");
-            e.printStackTrace();
-        } catch (LineUnavailableException e) {
-            System.err.println("Audio line for playing back is unavailable.");
-            e.printStackTrace();
-        } catch (IOException e) {
-            System.err.println("Error playing the audio file.");
-            e.printStackTrace();
-        } finally {
-            try {
-                if (audioStream != null) {
-                    audioStream.close();
-                }
-            } catch (IOException e) {
-                e.printStackTrace();
-            }
-        }
-    }
 
-    // Mimicking an enum for the game states
-    public static final class GameState {
-        public static final GameState MAINMENU = new GameState(0);
-        public static final GameState DASHBOARD = new GameState(1);
-        public static final GameState POPULATION = new GameState(2);
-        public static final GameState CLEARED_SCREEN = new GameState(3);
-        public static final GameState PLANETMAP = new GameState(4);
+    // Function that returns a string representing a rounded double to one decimal place, using a DecimalFormat object
+    public static String getRoundedDouble(double value) {
+	// Create a DecimalFormat object that rounds to one decimal place
+	DecimalFormat formatter = new DecimalFormat("0.0");
 
-        private final int currentState;
 
-        private GameState(int currentState) {
-            this.currentState = currentState;
-        }
+	// Return the rounded double as a string
+	return formatter.format(value);
+    } // end of getRoundedDouble
 
-        public int state() {
-            return currentState;
-        }
-    }
 
-    public static final class Region {
-        public String name;
-        public long required_stellar_reserves;
-        public long population_capacity;
-        public long soldiers_needed;
+    // Function is used to display the header of each menu. This is an OUTPUT method
+    public static void displayHeader(String headerTitle, String subheading) {
+	// Display the colony name and header title
+	displayGraphicalText(colonyName, customFont.deriveFont(50f), Color.GREEN, 10, 45);
+	displayGraphicalText("----------------- " + headerTitle + " -----------------", customFont.deriveFont(35f), Color.CYAN, 10, 85);
 
-        public Region(String name, long required_stellar_reserves, long population_capacity, long soldiers_needed) {
-            this.name = name;
-            this.required_stellar_reserves = required_stellar_reserves;
-            this.population_capacity = population_capacity;
-            this.soldiers_needed = soldiers_needed;
-        }
-    }
 
-    // Game variables
-    static long stellar_reserves, energy, population, soldiers, workers, doctors, unemployed, population_capacity, iterations, required_energy, number_of_people;
-    static int current_region;
-    static String colony_name;
-    static Font customFont;
-    static Region[] regions = {
-        new Region("Earth", 0, 10, 0),
-        new Region("Mars", 50, 20, 0),
-        new Region("The Asteroid Belt", 300, 40, 0),
-        new Region("Jupiter", 1000, 80, 0),
-        new Region("Saturn", 5000, 200, 0),
-        new Region("Uranus", 10000, 300, 0),
-        new Region("The Oort Cloud", 50000, 1000, 500),
-        new Region("Planet X", 100000, 3000, 1000),
-        new Region("Proxima Centauri B", 500000, 10000, 5000),
-        new Region("Ross 128B", 1000000, 15000, 10000),
-        new Region("Hoth", 2000000, 20000, 12000),
-        new Region("Teth", 3000000, 30000, 20000),
-        new Region("Gliese x7x", 4000000, 40000, 25000),
-        new Region("Groza-S", 6000000, 50000, 33000),
-        new Region("Agamar", 10000000, 60000, 40000),
-        new Region("Wayland", 20000000, 80000, 55000),
-        new Region("SR-25", 40000000, 80000, 60000),
-        new Region("Awajiba", 450000000, 80000, 100000),
-    };
+	// Display the subheading
+	displayGraphicalText(subheading, new Font("Consolas", Font.PLAIN, 20), Color.YELLOW, 10, 110);
+    } // end of displayHeader
 
-    // Game rates
-    static double stellar_reserves_production_rate, energy_production_rate, population_growth_rate, energy_consumption_rate;
 
-    // Passively detecting key presses
-    static char currentKeyPressed;
-    static volatile GameState previousGameState, currentGameState;
-    static double seconds_past;
-    static long maxWidth, maxWidth2, numSwitch, switchCost, newSwitchCost;
-    static boolean switching, choseFirst, choseSecond, jobInputComplete, workersAvailable, doctorsAvailable, soldiersAvailable, conqueringPlanet;
-    static String firstSwitch, secondSwitch, musicPath = "Assets/bg5.wav";
-    static Runnable jobSwitchRunnable, keyListenerRunnable;
-    static String[] professions = {"Unemployed", "Workers", "Doctors", "Soldiers"};
-    static Clip audioClip;
-    static AudioInputStream audioStream;
-    static boolean running = true;
-
+    // This is the first thing that users will see, the starting screen. It displays the game title, the developers, and a prompt to start the game. This is an OUTPUT method
     public static void displayStartingScreen() {
-        c.clear();
+	// Clear the console
+	c.clear();
 
-        // Include a nice background image
-        displayBackgroundImage("Assets/stars.jpg");
 
-        // Write the static messages (they do not require a loop)
-        displayGraphicalText("Welcome To", new Font("Consolas", Font.BOLD, 60), Color.GREEN, 445, 80);
-        displayGraphicalText("Starbound", customFont.deriveFont(150f), Color.CYAN, 100, 250);
-        displayGraphicalText("Empires", customFont.deriveFont(150f), Color.CYAN, 245, 430);
-        displayGraphicalText("Press Any Key to Start", new Font("OCR A Extended", Font.BOLD, 45), Color.YELLOW, 310, 525);
-        displayGraphicalText("Brought to you by Jerry Li and Jerry Chen", new Font("OCR A Extended", Font.PLAIN, 25), Color.GREEN, 315, 600);
+	// Include a nice background image
+	c.drawImage(background1, 0, 0, null);
 
-        c.getChar();
 
-        // Remove the starting screen in a cool way using a for loop and a delay
-        for (int i = 0; i < 29; i++) {
-            c.println();
-            try {
-                Thread.sleep(15);
-            } catch (InterruptedException e) {
-                e.printStackTrace();
-            }
-        }
+	// Write the welcome message
+	displayGraphicalText("Welcome To", new Font ("Consolas", Font.BOLD, 60), Color.GREEN, 445, 80);
+	displayGraphicalText("Starbound", customFont.deriveFont (150f), Color.CYAN, 100, 250);
+	displayGraphicalText("Empires", customFont.deriveFont (150f), Color.CYAN, 245, 430);
 
-        c.setCursor(1, 1);
-    }
 
+	// Tell the user to press any key to start
+	displayGraphicalText("Press Any Key to Start", new Font ("OCR A Extended", Font.BOLD, 45), Color.YELLOW, 310, 525);
+
+
+	// Display the developers of the game (Jerry Li and Jerry Chen)
+	displayGraphicalText("Brought to you by Jerry Li and Jerry Chen", new Font ("OCR A Extended", Font.PLAIN, 25), Color.GREEN, 315, 600);
+    } // end of displayStartingScreen
+
+
+    // This is the rules screen, which displays the rules of the game. It is displayed after the name and debug menu. This is an OUTPUT method
     public static void displayRules() {
-        displayGraphicalText("Instructions:", new Font("OCR A Extended", Font.BOLD, 30), Color.YELLOW, 10, 100);
-        displayGraphicalText("1. You are the leader of a colony in the Starbound Empires universe. You start on Earth.", new Font("Consolas", Font.PLAIN, 20), Color.GREEN, 10, 135);
-        displayGraphicalText("2. You must manage your material resources: stellar reserves and energy.", new Font("Consolas", Font.PLAIN, 20), Color.GREEN, 10, 170);
-        displayGraphicalText("3. You must also manage your human resources: soldiers, workers, and doctors.", new Font("Consolas", Font.PLAIN, 20), Color.GREEN, 10, 205);
-        displayGraphicalText("4. Soldiers will help you conquer new planets.", new Font("Consolas", Font.PLAIN, 20), Color.GREEN, 10, 240);
-        displayGraphicalText("5. Workers will increase your production of material resources.", new Font("Consolas", Font.PLAIN, 20), Color.GREEN, 10, 275);
-        displayGraphicalText("6. Doctors will increase your population growth.", new Font("Consolas", Font.PLAIN, 20), Color.GREEN, 10, 310);
-        displayGraphicalText("7. The game will become more familiar as you play.", new Font("Consolas", Font.PLAIN, 20), Color.GREEN, 10, 345);
-        displayGraphicalText("Press any key to continue...", new Font("OCR A Extended", Font.BOLD, 25), Color.YELLOW, 10, 380);
-        c.getChar();
-        for (int i = 0; i < 28; i++) {
-            c.println();
-            try {
-                Thread.sleep(10);
-            } catch (InterruptedException e) {
-                e.printStackTrace();
-            }
-        }
-        c.setCursor(1, 1);
-    }
+	// Draw the background image
+	c.drawImage(background1, 0, 0, null);
 
-    public static void setupGameVariables() {
-        // We start with 0 stellar reserves and energy
-        stellar_reserves = 0;
-        energy = 0;
 
-        // We start with 1 population, and just 1 worker
-        population = 1;
-        unemployed = 0;
-        workers = 1;
-        doctors = 0;
-        soldiers = 0;
-        population_capacity = 10;
-        current_region = 0;
+	// Write the rules of the game
+	displayGraphicalText(colonyName, customFont.deriveFont(50f), Color.CYAN, 10, 45);
+	displayGraphicalText("Instructions:", new Font ("OCR A Extended", Font.BOLD, 30), Color.YELLOW, 10, 100);
+	displayGraphicalText("1. This is an idle game where you manage your space empire's resources.", new Font ("Consolas", Font.PLAIN, 20), Color.GREEN, 10, 135);
+	displayGraphicalText("2. The goal is to conquer new planets until you reach the famed Awajiba planet.", new Font ("Consolas", Font.PLAIN, 20), Color.GREEN, 10, 170);
+	displayGraphicalText("3. You have human resources (workers, soldiers, doctors) and ", new Font ("Consolas", Font.PLAIN, 20), Color.GREEN, 10, 205);
+	displayGraphicalText("   materials (energy, stellar reserves) to help you conquer planets.", new Font ("Consolas", Font.PLAIN, 20), Color.GREEN, 10, 240);
+	displayGraphicalText("   a. Conquering planets requires stellar reserves and soldiers.", new Font ("Consolas", Font.PLAIN, 20), Color.GREEN, 10, 275);
+	displayGraphicalText("   b. To create these stellar reserves, you will use your workers", new Font ("Consolas", Font.PLAIN, 20), Color.GREEN, 10, 310);
+	displayGraphicalText("      which generate stellar reserves as well as energy.", new Font ("Consolas", Font.PLAIN, 20), Color.GREEN, 10, 345);
+	displayGraphicalText("   c. Doctors increase the rate of population growth.", new Font ("Consolas", Font.PLAIN, 20), Color.GREEN, 10, 380);
+	displayGraphicalText("   d. Population starts out as unemployed, and if you want to turn them", new Font ("Consolas", Font.PLAIN, 20), Color.GREEN, 10, 415);
+	displayGraphicalText("      into soldiers or workers, you will need energy.", new Font ("Consolas", Font.PLAIN, 20), Color.GREEN, 10, 450);
+	displayGraphicalText("4. If you are short on resources, you can head over to your mines and collect stellar reserves and energy as well.", new Font ("Consolas", Font.PLAIN, 20), Color.GREEN, 10, 485);
+	displayGraphicalText("5. Each action is performed on a seperate menu. Nagivate through the menus", new Font ("Consolas", Font.PLAIN, 20), Color.GREEN, 10, 520);
+	displayGraphicalText("   by pressing the keys listed in the menu headings.", new Font ("Consolas", Font.PLAIN, 20), Color.GREEN, 10, 555);
 
-        seconds_past = 0f;
-        iterations = 0;
-        currentGameState = GameState.MAINMENU;
-        previousGameState = GameState.CLEARED_SCREEN;
-        switching = false;
-        choseFirst = false;
-        choseSecond = false;
-        conqueringPlanet = false;
-        switchCost = 600;
 
-        currentKeyPressed = 0;
-        jobInputComplete = false;
+	// Tell the user to press any key to continue
+	displayGraphicalText("Press any key to continue", new Font ("OCR A Extended", Font.BOLD, 25), Color.YELLOW, 10, 600);
+    } // end of displayRules
 
-        workersAvailable = false;
-        doctorsAvailable = false;
-        soldiersAvailable = false;
-    }
 
-    public static void updateGameVariables() {
-        stellar_reserves_production_rate = workers * 0.1;
-        energy_production_rate = workers * 5 + 5; // gigajoules
-        population_growth_rate = doctors * 0.1 + 0.1; // people per second
-
-        if (iterations % 100 == 0) {
-            stellar_reserves += stellar_reserves_production_rate*10;
-            // Population only grows if there is enough energy
-            if (energy >= population*200 && population < population_capacity) {
-                population += population_growth_rate*10;
-                if (population > population_capacity)
-                    population = population_capacity;
-            } unemployed = population - workers - doctors - soldiers;
-        }
-
-        if (iterations % 2 == 0)
-            energy += energy_production_rate / 5;
-    }
-
+    // Initialize the game variables and set the console theme to match the game. This function is called at the start of the program. This is a PROCESSING method
     public static void initializeGame() {
-        // Set the text color, background color, and font for the console to match our game theme
-        c.setTextBackgroundColor(Color.BLACK);
-        c.setTextColor(Color.WHITE);
+	// Set the text color, background color, and font for the console to match our game theme
+	c.setTextBackgroundColor(Color.BLACK);
+	c.setTextColor(Color.WHITE);
+	c.setColor(Color.BLACK);
 
-        customFont = null;
 
-        try {
-            String fontPath = "Assets/gamefont.ttf";
-            File fontFile = new File(fontPath);
-            InputStream fontStream = new FileInputStream(fontFile);
-            customFont = Font.createFont(Font.TRUETYPE_FONT, fontStream);
-        } catch (FontFormatException e) {
-            e.printStackTrace();
-            System.err.println("The font file is not in the correct format. Please ensure that it is a .ttf file in the Assets folder.");
-        } catch (IOException e) {
-            e.printStackTrace();
-            System.err.println("There was an I/O error when reading the font file. Please ensure that it is a .ttf file in the Assets folder.");
-        }
+	// Load the custom font
+	customFont = null;
 
-        displayStartingScreen();
-        new Thread(new Runnable() {
-            public void run() {
-                playGameSound("Assets/menuswitch.wav");
-            }
-        }).start();
 
-        do {
-            c.print("What is your colony name (max 30 characters)? ");
-            colony_name = c.readLine();
-            c.clear();
-        } while (colony_name.length() > 30 || colony_name.length() < 1);
-        new Thread(new Runnable() {
-            public void run() {
-                playGameSound("Assets/menuswitch.wav");
-            }
-        }).start();
+	// Load the custom font from the Assets folder, with proper error handling
+	try {
+	    // Load the custom font from the Assets folder
+	    String fontPath = "Assets/gamefont.ttf";
+	    File fontFile = new File (fontPath);
 
-        displayBackgroundImage("Assets/stars.jpg");
-        displayGraphicalText(colony_name, customFont.deriveFont(50f), Color.CYAN, 10, 45);
-        displayRules();
-        new Thread(new Runnable() {
-            public void run() {
-                playGameSound("Assets/menuswitch.wav");
-            }
-        }).start();
-        displayGraphicalText(colony_name, customFont.deriveFont(50f), Color.CYAN, 10, 45);
-        setupGameVariables();
 
-        c.setCursor(6, 1);
-    }
+	    // Create a FileInputStream object to read the font file
+	    InputStream fontStream = new FileInputStream (fontFile);
 
-    public static void updateGameStates() {
-        if ((currentKeyPressed == 'M' || currentKeyPressed == 'm') && currentGameState != GameState.MAINMENU) {
-            new Thread(new Runnable() {
-                public void run() {
-                    playGameSound("Assets/menuswitch.wav");
-                }
-            }).start();
-            switching = false;
-            choseFirst = false;
-            choseSecond = false;
-            currentGameState = GameState.MAINMENU;
-        }
 
-        else if ((currentKeyPressed == 'D' || currentKeyPressed == 'd') && currentGameState != GameState.DASHBOARD) {
-            new Thread(new Runnable() {
-                public void run() {
-                    playGameSound("Assets/menuswitch.wav");
-                }
-            }).start();
-            currentGameState = GameState.DASHBOARD;
-        }
+	    // Create a custom font object from the font file
+	    customFont = Font.createFont (Font.TRUETYPE_FONT, fontStream);
+	} catch (FontFormatException error) {
+	    error.printStackTrace ();
+	} catch (IOException error) {
+	    error.printStackTrace ();
+	}
 
-        else if ((currentKeyPressed == 'P' || currentKeyPressed == 'p') && currentGameState != GameState.POPULATION) {
-            new Thread(new Runnable() {
-                public void run() {
-                    playGameSound("Assets/menuswitch.wav");
-                }
-            }).start();
-            currentGameState = GameState.POPULATION;
-        }
-        
-        else if ((currentKeyPressed == 'C' || currentKeyPressed == 'c') && currentGameState != GameState.PLANETMAP) {
-            new Thread(new Runnable() {
-                public void run() {
-                    playGameSound("Assets/menuswitch.wav");
-                }
-            }).start();
-            currentGameState = GameState.PLANETMAP;
-        }
-    }
 
-    public static void displayHeader(String headerTitle, GameState newGameState) {
-        displayGraphicalText(colony_name, customFont.deriveFont(50f), Color.CYAN, 10, 45);
-        displayGraphicalText("----------------- " + headerTitle + " -----------------", customFont.deriveFont(35f), Color.GREEN, 10, 85);
-        previousGameState = currentGameState;
-        currentGameState = newGameState;
-    }
+	// Load the background images
+	background1 = null;
+	background2 = null;
+	try {
+	    // Load the background images from the Assets folder
+	    background1 = ImageIO.read(new File("Assets/stars.jpg"));
+	    background2 = ImageIO.read(new File("Assets/planet.png"));
+	} catch (IOException error) {
+	    error.printStackTrace();
+	}
 
-    public static void callGameStates() {
-        if (currentGameState == GameState.CLEARED_SCREEN) {
-            c.clear();
-            currentGameState = previousGameState;
-            previousGameState = GameState.CLEARED_SCREEN;
-        }
 
-        if (currentGameState == GameState.MAINMENU) {
-            if (currentGameState != previousGameState || previousGameState == GameState.CLEARED_SCREEN) {
-                displayBackgroundImage("Assets/planet.png");
-                displayHeader("MAIN MENU", GameState.MAINMENU);
-                displayGraphicalText("It is your job to maximize resources and conquer all the planets!", new Font("Consolas", Font.PLAIN, 20), Color.YELLOW, 10, 150);
-                displayGraphicalText("Press D to view the dashboard.", new Font("Consolas", Font.PLAIN, 20), Color.YELLOW, 10, 185);
-                displayGraphicalText("Press P to manage your population.", new Font("Consolas", Font.PLAIN, 20), Color.YELLOW, 10, 220);
-                displayGraphicalText("Press C to conquer new planets.", new Font("Consolas", Font.PLAIN, 20), Color.YELLOW, 10, 255);
-                displayGraphicalText("Press M to return to the main menu at any time.", new Font("Consolas", Font.PLAIN, 20), Color.YELLOW, 10, 310);
-            }
-        }
+	// Initialize game variables
+	iterations = 0; // Initialize the number of iterations to 0
+	iterationsSinceLastCollect = 0; // Initialize the number of iterations since the last mine collection to 0
+	currentRegion = 0; // Initialize the current region to Earth (0)
+	mineLevel = 0; // Initialize the mine level to Basic (0)
+	currentMenu = 0; // Initialize the current menu to the starting screen (0)
+	switchCost = 600; // Initialize the cost of switching regions to 600 energy
+	developerMultiplier = 1; // Initialize the developer multiplier to 1 if debug mode is disabled
+	secondsPast = 0.0; // Initialize the number of seconds passed to 0
+	musicPath = "Assets/soundtrack.wav"; // Initialize the path to the background music
+	imageNotShown = true; // Initialize the image not shown variable to true
+    } // end of initializeGame
 
-        else if (currentGameState == GameState.DASHBOARD) {
-            if (currentGameState != previousGameState || previousGameState == GameState.CLEARED_SCREEN) {
-                c.clear();
-                displayHeader("DASHBOARD", GameState.DASHBOARD);
-                displayGraphicalText("Press M to return to the main menu at any time.", new Font("Consolas", Font.PLAIN, 20), Color.YELLOW, 10, 110);
-            }
 
-            dashboard();
-        }
+    // Displays the values for various variables such as resources, population, and production rates. This is displayed for the main menu. This is an OUTPUT method
+    public static void displayValues() {
+	// Calculating max width so we can display better
+	int maxWidth;
 
-        else if (currentGameState == GameState.POPULATION) {
-            if (currentGameState != previousGameState || previousGameState == GameState.CLEARED_SCREEN) {
-                c.clear();
-                displayHeader("POPULATION", GameState.POPULATION);
-                displayGraphicalText("Press M to return to the main menu at any time.", new Font("Consolas", Font.PLAIN, 20), Color.YELLOW, 10, 110);
-            }
-    
-            population();
-        }
 
-        else if (currentGameState == GameState.PLANETMAP) {
-            if (currentGameState != previousGameState || previousGameState == GameState.CLEARED_SCREEN) {
-                c.clear();
-                displayHeader("PLANET MAP", GameState.PLANETMAP);
-                displayGraphicalText("Press M to return to the main menu at any time.", new Font("Consolas", Font.PLAIN, 20), Color.YELLOW, 10, 110);
-            }
-    
-            planet_map();
-        }
-    }
+	// Construct the output lines dynamically using an array and the game variables
+	String outputLines[] = {
+	    "Stellar Reserves [MT]: " + resourceCounter[0],
+	    "Energy [GJ]: " + resourceCounter[1],
+	    "Population: " + (peopleCounter[0] + peopleCounter[1] + peopleCounter[2] + peopleCounter[3]),
+	    "Unemployed: " + peopleCounter[0],
+	    "Workers: " + peopleCounter[1],
+	    "Soldiers: " + peopleCounter[2],
+	    "Doctor: " + peopleCounter[3],
+	    "Population Capacity: " + populationCaps [currentRegion],
+	    "Stellar Reserves Production Rate [MT/s]: " + getRoundedDouble(stellarReservesProductionRate),
+	    "Energy Production Rate [GJ/s]: " + energyProductionRate,
+	    "Population Growth Rate [people/s]: " + populationGrowthRate
+	};
 
-    public static void dashboard() {
-        c.setCursor(6, 1);
-        maxWidth = 0;
 
-        String output_lines[] = {
-            "Stellar Reserves: " + stellar_reserves + " MT",
-            "Energy: " + energy + " GJ",
-            "Population: " + population,
-            "Unemployed: " + unemployed,
-            "Workers: " + workers,
-            "Doctors: " + doctors,
-            "Soldiers: " + soldiers,
-            "Population Capacity: " + population_capacity,
-            "Stellar Reserves Production Rate: " + stellar_reserves_production_rate + " MT/s",
-            "Energy Production Rate: " + energy_production_rate + " GJ/s",
-            "Population Growth Rate: " + population_growth_rate + " people/s"
-        };
+	// Dynamically calculate the max width of the output lines
+	maxWidth = 0;
+	for (int i = 0 ; i < outputLines.length ; i++)
+	    maxWidth = Math.max (maxWidth, outputLines [i].length ());
 
-        for (int i = 0; i < output_lines.length; i++)
-            maxWidth = Math.max(maxWidth, output_lines[i].length());
 
-        // Construct the dash string using an algorithm that dynamically adjusts to the max width
-        String dashes = repeat("-", Math.max(5, (maxWidth-20+maxWidth%2)/2)+1);
+	// Construct the dash string using an algorithm that dynamically adjusts to the max width
+	String dashes = repeat ("-", Math.max (5, (maxWidth - 20 + maxWidth % 2) / 2) + 1);
+	displayGraphicalText(dashes + " MATERIAL RESOURCES " + dashes, new Font ("Consolas", Font.BOLD, 20), Color.YELLOW, 10, 150);
+	displayGraphicalText(outputLines[0], new Font ("Consolas", Font.PLAIN, 20), Color.GREEN, 10, 180);
+	displayGraphicalText(outputLines[1], new Font ("Consolas", Font.PLAIN, 20), Color.GREEN, 10, 210);
 
-        c.println(dashes + " MATERIAL RESOURCES " + dashes);
-        c.println("Stellar Reserves: " + stellar_reserves + " MT");
-        c.println("Energy: " + energy + " GJ\n");
 
-        c.println(dashes + "-- HUMAN RESOURCES -" + dashes);
-        c.println("Population: " + population);
-        c.println("Unemployed: " + unemployed);
-        c.println("Workers: " + workers);
-        c.println("Soldiers: " + soldiers);
-        c.println("Doctors: " + doctors + "\n");
+	// Display the human resources section (population and professions)
+	displayGraphicalText(dashes + "-- HUMAN RESOURCES --" + dashes, new Font ("Consolas", Font.BOLD, 20), Color.YELLOW, 10, 240);
+	displayGraphicalText(outputLines[2], new Font ("Consolas", Font.PLAIN, 20), Color.GREEN, 10, 270);
+	displayGraphicalText(outputLines[3], new Font ("Consolas", Font.PLAIN, 20), Color.GREEN, 10, 300);
+	displayGraphicalText(outputLines[4], new Font ("Consolas", Font.PLAIN, 20), Color.GREEN, 10, 330);
+	displayGraphicalText(outputLines[5], new Font ("Consolas", Font.PLAIN, 20), Color.GREEN, 10, 360);
+	displayGraphicalText(outputLines[6], new Font ("Consolas", Font.PLAIN, 20), Color.GREEN, 10, 390);
 
-        c.println(dashes + "-- LIMITS & RATES --" + dashes);
-        c.println("Population Capacity: " + population_capacity);
-        c.print("Stellar Reserves Production Rate: ");
-        c.print(stellar_reserves_production_rate, 2, 1);
-        c.println(" MT/s");
-        c.println("Energy Production Rate: " + energy_production_rate + " GJ/s");
-        c.print("Population Growth Rate: ");
-        c.print(population_growth_rate, 2, 1);
-        c.println(" people/s");        
 
-        c.print("_________________________________________________________\n\nTime: ");
-        c.print(seconds_past, 2, 1);
-        c.println(" s\n");
-    }
+	// Display the limits and rates section (population cap, production rates)
+	displayGraphicalText(dashes + "-- LIMITS & RATES --" + dashes, new Font ("Consolas", Font.BOLD, 20), Color.YELLOW, 10, 420);
+	displayGraphicalText(outputLines[7], new Font ("Consolas", Font.PLAIN, 20), Color.GREEN, 10, 450);
+	displayGraphicalText(outputLines[8], new Font ("Consolas", Font.PLAIN, 20), Color.GREEN, 10, 480);
+	displayGraphicalText(outputLines[9], new Font ("Consolas", Font.PLAIN, 20), Color.GREEN, 10, 510);
+	displayGraphicalText(outputLines[10], new Font ("Consolas", Font.PLAIN, 20), Color.GREEN, 10, 540);
 
-    public static void population() {
-        c.setCursor(6, 1);
 
-        if (currentKeyPressed == 'U' || currentKeyPressed == 'u') {
-            switching = true;
-            currentKeyPressed = 0;
-            new Thread(new Runnable() {
-                public void run() {
-                    playGameSound("Assets/defaultclick.wav");
-                }
-            }).start();
-        }
+	// Display the time passed
+	displayGraphicalText("________________________________________________", new Font ("Consolas", Font.PLAIN, 20), Color.GREEN, 10, 570);
+	displayGraphicalText("Time [S]: ", new Font ("Consolas", Font.PLAIN, 20), Color.WHITE, 10, 610);
+	displayGraphicalText(getRoundedDouble(secondsPast), new Font ("Consolas", Font.BOLD, 20), Color.BLACK, 115, 611);
+    } // end of displayValues
 
-        // Print descriptoin
-        c.println("You can switch professions to manage your colony. Each switch costs " + switchCost + " GJ/person switched. The cost increases exponentially for each person switched. Choose between Workers (energy and stellar reserve production), Doctors (population growth), Soldiers (planet conquering), and Unemployed. Population growth requires a set amount of energy.\n");
-        
-        c.println("Energy: " + energy + " GJ");
-        c.println("Energy Production Rate: " + energy_production_rate + " GJ/s\n");
 
-        c.println("Population: " + population);
-        c.println("Unemployed: " + unemployed);
-        c.println("Workers: " + workers);
-        c.println("Doctors: " + doctors);
-        c.println("Soldiers: " + soldiers);
-        c.println("\nPopulation Capacity: " + population_capacity);
-        c.println("Population Growth Rate: " + population_growth_rate + " people/s\n");
+    // The function that displays the starting screen.
+    public static void startMenu() {
+	// Display the actual starting screen
+	displayStartingScreen();
+	c.getChar();
+	currentMenu = 1; // progress to the next screen
 
-        if (switching) {
-            if (!choseFirst) {
-                c.println("Choose a profession to switch from:");
-                c.println("Press 1 for Unemployed");
-                c.println("Press 2 for Workers");
-                c.println("Press 3 for Doctors");
-                c.println("Press 4 for Soldiers");
-                c.println("Press 5 to cancel");
-                if (currentKeyPressed == '1' || currentKeyPressed == '2' || currentKeyPressed == '3' || currentKeyPressed == '4') {
-                    new Thread(new Runnable() {
-                        public void run() {
-                            playGameSound("Assets/defaultclick.wav");
-                        }
-                    }).start();
-                    firstSwitch = professions[currentKeyPressed-'0'-1];
-                    currentKeyPressed = 0;
-                    choseFirst = true;
-                    currentGameState = GameState.CLEARED_SCREEN;
-                    previousGameState = GameState.POPULATION;
-                } else if (currentKeyPressed == '5') {
-                    new Thread(new Runnable() {
-                        public void run() {
-                            playGameSound("Assets/defaultclick.wav");
-                        }
-                    }).start();
-                    switching = false;
-                    choseFirst = false;
-                    choseSecond = false;
-                    currentGameState = GameState.CLEARED_SCREEN;
-                    previousGameState = GameState.POPULATION;
-                } else if (currentKeyPressed != 0) {
-                    new Thread(new Runnable() {
-                        public void run() {
-                            playGameSound("Assets/invalidclick.wav");
-                        }
-                    }).start();
-                    c.println("Invalid input. Please try again.");
-                    currentKeyPressed = 0;
-                }
-            }
-            
-            else if (!choseSecond) {
-                c.println("Choose a profession to switch to (you're switching from \'" + firstSwitch +"\'):");
-                c.println("Press 1 for Workers");
-                c.println("Press 2 for Doctors");
-                c.println("Press 3 for Soldiers");
-                c.println("Press 4 to cancel");
-                if (currentKeyPressed == '4') {
-                    new Thread(new Runnable() {
-                        public void run() {
-                            playGameSound("Assets/defaultclick.wav");
-                        }
-                    }).start();
-                    switching = false;
-                    choseFirst = false;
-                    choseSecond = false;
-                    currentGameState = GameState.CLEARED_SCREEN;
-                    previousGameState = GameState.POPULATION;
-                } else if (currentKeyPressed == '1' || currentKeyPressed == '2' || currentKeyPressed == '3') {
-                    new Thread(new Runnable() {
-                        public void run() {
-                            playGameSound("Assets/defaultclick.wav");
-                        }
-                    }).start();
-                    secondSwitch = professions[currentKeyPressed-'0'];
-                    if (secondSwitch.equals(firstSwitch)) {
-                        c.println("You cannot switch to the same profession.");
-                        currentKeyPressed = 0;
-                    } else {
-                        choseSecond = true;
-                        currentGameState = GameState.CLEARED_SCREEN;
-                        previousGameState = GameState.POPULATION;
-                    }
-                } else if (currentKeyPressed == '4') {
-                    new Thread(new Runnable() {
-                        public void run() {
-                            playGameSound("Assets/defaultclick.wav");
-                        }
-                    }).start();
-                    switching = false;
-                    choseFirst = false;
-                    choseSecond = false;
-                    currentGameState = GameState.CLEARED_SCREEN;
-                    previousGameState = GameState.POPULATION;
-                } else if (currentKeyPressed != 0) {
-                    new Thread(new Runnable() {
-                        public void run() {
-                            playGameSound("Assets/invalidclick.wav");
-                        }
-                    }).start();
-                    c.println("Invalid input. Please try again.");
-                    currentKeyPressed = 0;
-                }
-            }
-            
-            else {
-                c.print("Enter the number of people to switch: ");
-                numSwitch = c.readLong();
-                required_energy = 0;
-                newSwitchCost = switchCost;
 
-                // Calculate the required energy, and update the switch cost due to exponential growth
-                for (int i = 0; i < numSwitch; ++i) {
-                    required_energy += newSwitchCost;
-                    newSwitchCost = (int) ((double) newSwitchCost * 1.25);
-                }
-                
-                if (firstSwitch.equals("Workers"))
-                    number_of_people = workers;
-                else if (firstSwitch.equals("Doctors"))
-                    number_of_people = doctors;
-                else if (firstSwitch.equals("Soldiers"))
-                    number_of_people = soldiers;
-                else if (firstSwitch.equals("Unemployed"))
-                    number_of_people = unemployed;
+	// Remove the starting screen in a cool way using a for loop and a delay
+	for (int i = 0 ; i < 29 ; i++) {
+	    c.println();
+	    sleep(15); // Pause for 15ms
+	}
 
-                if (required_energy > energy) {
-                    c.println("You do not have enough energy to switch " + numSwitch + " people. Press any key to continue.");
-                    c.getChar();
-                    switching = false;
-                    choseFirst = false;
-                    choseSecond = false;
-                    currentGameState = GameState.CLEARED_SCREEN;
-                    previousGameState = GameState.POPULATION;
-                } else if (numSwitch > number_of_people) {
-                    c.println(numSwitch + " is more than the number of " + firstSwitch + " you have.");
-                    switching = false;
-                    choseFirst = false;
-                    choseSecond = false;
-                    currentGameState = GameState.CLEARED_SCREEN;
-                    previousGameState = GameState.POPULATION;
-                } else {
-                    if (firstSwitch.equals("Workers")) {
-                        if (secondSwitch.equals("Doctors")) {
-                            workers -= numSwitch;
-                            doctors += numSwitch;
-                        } else if (secondSwitch.equals("Soldiers")) {
-                            workers -= numSwitch;
-                            soldiers += numSwitch;
-                        } else if (secondSwitch.equals("Unemployed")) {
-                            workers -= numSwitch;
-                            unemployed += numSwitch;
-                        }
-                    }
-                    
-                    else if (firstSwitch.equals("Doctors")) {
-                        if (secondSwitch.equals("Workers")) {
-                            doctors -= numSwitch;
-                            workers += numSwitch;
-                        } else if (secondSwitch.equals("Soldiers")) {
-                            doctors -= numSwitch;
-                            soldiers += numSwitch;
-                        } else if (secondSwitch.equals("Unemployed")) {
-                            doctors -= numSwitch;
-                            unemployed += numSwitch;
-                        }
-                    }
-                    
-                    else if (firstSwitch.equals("Soldiers")) {
-                        if (secondSwitch.equals("Workers")) {
-                            soldiers -= numSwitch;
-                            workers += numSwitch;
-                        } else if (secondSwitch.equals("Doctors")) {
-                            soldiers -= numSwitch;
-                            doctors += numSwitch;
-                        } else if (secondSwitch.equals("Unemployed")) {
-                            soldiers -= numSwitch;
-                            unemployed += numSwitch;
-                        }
-                    }
-                    
-                    else if (firstSwitch.equals("Unemployed")) {
-                        if (secondSwitch.equals("Workers")) {
-                            unemployed -= numSwitch;
-                            workers += numSwitch;
-                        } else if (secondSwitch.equals("Doctors")) {
-                            unemployed -= numSwitch;
-                            doctors += numSwitch;
-                        } else if (secondSwitch.equals("Soldiers")) {
-                            unemployed -= numSwitch;
-                            soldiers += numSwitch;
-                        }
-                    }
-                    
-                    energy -= required_energy;
-                    c.println("Successfully switched " + numSwitch + " " + firstSwitch + " to " + secondSwitch + ". Press any key to continue.");
-                    c.getChar();
-                    switching = false;
-                    choseFirst = false;
-                    choseSecond = false;
-                    currentGameState = GameState.CLEARED_SCREEN;
-                    previousGameState = GameState.POPULATION;
-                    switchCost = newSwitchCost;
-                }
-            }
-        }
-        
-        else
-            c.println("Press U to switch professions (" + switchCost + " GJ/person switched)");
-    }
 
-    public static void planet_map() {
-        c.setCursor(6, 1);
-        c.println("- You can conquer new planets to expand your empire. Each planet increases your current population capacity and requires a certain amount of stellar reserves to conquer.\n- As you progress, you will also need soldiers to conquer more challenging planets.\n- Be prepared for random events that may affect your conquests.\n- Your final goal is to conquer the legendary Awajiba planet. Good luck!\n");
+	// Reset the cursor position
+	c.setCursor (1, 1);
+    } // end of startMenu
 
-        if (currentKeyPressed == 'B' || currentKeyPressed == 'b') {
-            conqueringPlanet = true;
-            currentKeyPressed = 0;
-        }
 
-        c.println("Current Region: " + regions[current_region].name);
-        c.println("Population Capacity: " + regions[current_region].population_capacity + "\n");
+    // The function that displays the name menu, where the user can input their colony name and choose whether to enable debug mode
+    public static void nameMenu() {
+	// Play the menu switch sound effect
+	// Auditory OUTPUT section
+	playGameEffect("Assets/menuswitch.wav");
 
-        c.println("Stellar Reserves: " + stellar_reserves + " MT");
-        c.println("Soldiers: " + soldiers + "\n");
 
-        if (current_region < 17) {
-            Region next_region = regions[current_region+1];
-            c.println("Next Region: " + next_region.name);
-            c.println("Stellar Reserves Required: " + next_region.required_stellar_reserves + " MT");
-            c.println("Soldiers Needed: " + next_region.soldiers_needed + "\n");
+	// Display the name menu, and get the user's input for the colony name and debug mode
+	// INPUT Section: prompts the user to input their colony name
+	slowPrint("What is your colony name (max 30 characters)? ");
+	colonyName = c.readLine(); // Reads the colony name input
 
-            if (stellar_reserves >= next_region.required_stellar_reserves && soldiers >= next_region.soldiers_needed) {
-                if (conqueringPlanet) {
-                    long reserves_payment = next_region.required_stellar_reserves;
-                    long soldiers_payment = next_region.soldiers_needed;
 
-                    clearRow(c.getRow());
-                    c.setCursor(c.getRow()-1, 1);
-                    c.print("Press any character to prepare your soldiers.");
-                    c.getChar();
-                    clearRow(c.getRow());
-                    c.setCursor(c.getRow()-1, 1);
+	// Ensure that the colony name is between 1 and 30 characters, using proper invalid checking. This while loop only runs if the original input is invalid
+	// INPUT Section Continued
+	while (colonyName.length () > 30 || colonyName.length () < 1) {
+	    // Clear the console and ask the user to input a valid colony name
+	    c.clear();
+	    c.print ("[INVALID NAME] What is your colony name (max 30 characters)? ");
+	    colonyName = c.readLine();
+	}
 
-                    boolean caughtOffGuard = randomEvent(0.15);
-                    boolean underestimated = randomEvent(0.35);
 
-                    try {
-                        int start = (int) (Math.random() * 6) + 3;
-                        for (int i = start*10; i >= 1; i--) {
-                            c.print("Troops land in " + (int) i/10 + "...");
-                            Thread.sleep(80);
-                            ++iterations;
-                            c.setCursor(c.getRow(), 1);
-                        }
-                    } catch (InterruptedException e) {
-                        e.printStackTrace();
-                    }
+	// Clear the console and play the menu switch sound effect
+	c.clear();
+	// Auditory OUTPUT section
+	playGameEffect("Assets/menuswitch.wav");
+	char debugChoice;
+       
+	// Ask the user if they want to enable debug mode, and set the developer multiplier and debug flag accordingly. This is a different INPUT Section for debug mode
+	c.print("Debug mode speeds up the game and gives you special multipliers, so that a developer/teacher can play through the game faster. Would you like to enable debug mode (y/n)? ");
+	debugChoice = c.getChar();
 
-                    // Random events
-                    c.setCursor(c.getRow(), 1);
-                    if (caughtOffGuard) {
-                        c.println("The alien forces on " + next_region.name + " were caught off guard by your powerful military strategy! You have conquered the planet with ease, and the amounts needed are decreased.");
-                        reserves_payment -= reserves_payment * (Math.random() * 0.2 + 0.1);
-                        soldiers_payment -= soldiers_payment * (Math.random() * 0.2 + 0.1);
-                    } else if (underestimated) {
-                        c.println("The alien forces on " + next_region.name + " were underestimated, and a bloody battle ensues! The amounts needed are increased.");
-                        reserves_payment += reserves_payment * (Math.random() * 0.2 + 0.1);
-                        soldiers_payment += soldiers_payment * (Math.random() * 0.2 + 0.1);
-                    } else {
-                        c.println("The alien forces on " + next_region.name + " have put up some resistance, but you have conquered the planet!");
-                    }
 
-                    c.println();
-                    try {
-                        int start = (int) (Math.random() * 8) + 3;
-                        for (int i = start*10; i >= 1; i--) {
-                            c.print("Finishing battle in " + (int) i/10 + "...");
-                            Thread.sleep(80);
-                            ++iterations;
-                            c.setCursor(c.getRow(), 1);
-                        }
-                    } catch (InterruptedException e) {
-                        e.printStackTrace();
-                    }
+	// Ensure that the user inputs a valid choice (y or n), using proper invalid checking. This while loop only runs if the original input is invalid
+	// INPUT Section Continued
+	while (debugChoice != 'y' && debugChoice != 'n') {
+	    c.clear();
+	    c.print("[INVALID CHOICE] Would you like to enable debug mode? (y/n) ");
+	    debugChoice = c.getChar();
+	}
 
-                    // If we don't have enough stellar reserves or soldiers, we can't conquer the planet
-                    if (underestimated && (stellar_reserves < reserves_payment || soldiers < soldiers_payment)) {
-                        c.println("After the amounts needed were increased, you do not have enough resources to conquer " + next_region.name + ". Your soldiers and population have been decimated, and your stellar reserves and energy have been emptied.");
 
-                        // Set these to zero
-                        stellar_reserves = 0;
-                        energy = 0;
-                        soldiers = 0;
-                        unemployed = 0;
+	// Clear the console
+	c.clear();
 
-                        // Decrease workers and doctors by a random large percentage
-                        workers -= workers * (Math.random() * 0.5 + 0.2);
-                        doctors -= doctors * (Math.random() * 0.5 + 0.2);
-                    } else {
-                        c.println("You have successfully conquered " + next_region.name + "! Press any key to continue.");
-                        c.getChar();
-                        stellar_reserves -= reserves_payment;
-                        soldiers -= soldiers_payment;
-                        population_capacity += next_region.population_capacity;
-                        ++current_region;
-                    }
 
-                    conqueringPlanet = false;
-                    currentGameState = GameState.CLEARED_SCREEN;
-                } else {
-                    c.print("You have enough resources to conquer the next planet. Press B to begin conquering " + next_region.name + ".");
-                }
+	// If the user chooses to enable debug mode, set the developer multiplier and debug flag accordingly
+	// PROCESSING Section: sets the developer multiplier and debug flag based on the user's choice
+	if (debugChoice == 'y') {
+	    developerMultiplier = 5;
+	    debug = true;
+	    // OUTPUT Section, notifies the user that debug mode is enabled
+	    slowPrint("Debug mode enabled. You have significantly increased framerate and developer multipliers. Press any key to continue.");
+	    c.getChar();
+	}
 
-            } else {
-                c.println("You need " + (next_region.required_stellar_reserves - stellar_reserves) + " MT more stellar reserves and " + (next_region.soldiers_needed - soldiers) + " more soldiers to conquer " + next_region.name + ".");
-            }
-        }
 
-        else {
-            c.println("You have conquered all the planets! Congratulations on this extremely difficult task, you have won the game!");
-        }
-    }
+	// Progress to the next screen (rules menu)
+	currentMenu = 2;
+    } // end of nameMenu
 
-    public static void main(String[] args) {
-        playBackgroundMusic();
-        c = new Console(29, 115, 18, "Starbound Empires"); // Initialize the console
-        initializeGame();
 
-        // Keeping the main thread alive to keep the application running
-        while (running) {
-            if (c.isCharAvail())
-                currentKeyPressed = c.getChar();
-            updateGameVariables();
-            updateGameStates();
-            callGameStates();
+    // The function that displays the rules menu, which displays detailed instructions on how to play the game
+    public static void rulesMenu () {
+	// Play the menu switch sound effect
+	// Auditory OUTPUT section
+	playGameEffect("Assets/menuswitch.wav");
 
-            try {
-                Thread.sleep(80);
-                seconds_past += 0.1;
-                ++iterations;
-            } catch (InterruptedException e) {
-                e.printStackTrace();
-            }
-        }
 
-        try {
-            audioClip.stop();
-            audioClip.close();
-            audioStream.close();
-        } catch (IOException e) {
-            e.printStackTrace();
-        }
-    }
-}
+	// Display the rules menu
+	displayRules();
+
+
+	// Wait for the user to press a key before transitioning
+	c.getChar();
+
+
+	// Clear console using another transition
+	for (int i = 0 ; i < 29 ; i++) {
+	    c.println();
+	    sleep(15); // Pause for 15ms
+	}
+
+
+	// Reset the cursor position
+	c.setCursor (1, 1);
+
+
+	// Progress to the next screen (main menu)
+	currentMenu = 3;
+    } // end of rulesMenu
+
+
+    // The main menu function, which displays the main menu of the game, showing the user's resources, population, and production rates
+    public static void mainMenu () {
+	// There are 2 cases where we clear the console and display the background image. The first case is every 100 frames (10 seconds), and the second case is when we switch back from another menu, and in this case, imageNotShown would be true. In both cases the background image needs to be redrawn
+	if (iterations % 100 == 0 || imageNotShown) {
+	    // Clear the console and display the background image
+	    c.clear();
+	    c.drawImage(background2, 0, 0, null);
+
+
+	    // Reset imageNotShown to false
+	    imageNotShown = false;
+	} else {
+	    // This rectangle is for the time passed, it will be cleared and redrawn every iteration, we use log functions to make the rectangle grow linearly to the number of digits in secondsPast
+	    c.clearRect(112, 593, 40 + 15*((int) (Math.log(secondsPast)/Math.log(10))), 23);
+	}
+
+
+	// Display the main menu header and resource/population values
+	displayHeader("Main Menu", "[P] - Population Menu | [R] - Region Map | [M] - View Mines");
+	displayValues();
+
+
+	// If the user presses a key, check if they pressed P, R, or M, and progress to the corresponding menu. The c.isCharAvail() function is used to determine if a key has been pressed, but without blocking the program execution.
+	// INPUT + PROCESSING section
+	if (c.isCharAvail()) {
+	    char pressed = c.getChar(); // INPUT section to detect the keypress
+	    // For each below case, we clear the console, play the menu switch sound effect, and progress to the menu that corresponds to the key pressed
+	    // PROCESSING Section to redirect to different menus
+	    if (pressed == 'p') {
+		// Clear the console, play the menu switch sound effect, and progress to the population menu
+		c.clear();
+		// Auditory OUTPUT section
+		playGameEffect("Assets/menuswitch.wav");
+		currentMenu = 4;
+		pressed = 0;
+	    } else if (pressed == 'r') {
+		// Clear the console, play the menu switch sound effect, and progress to the region map menu
+		c.clear();
+		// Auditory OUTPUT section
+		playGameEffect("Assets/menuswitch.wav");
+		currentMenu = 5;
+		pressed = 0;
+	    } else if (pressed == 'm') {
+		// Clear the console, play the menu switch sound effect, and progress to the mine menu
+		c.clear();
+		// Auditory OUTPUT section
+		playGameEffect("Assets/menuswitch.wav");
+		currentMenu = 6;
+		pressed = 0;
+	    }
+	}
+    } // end of mainMenu
+
+
+    // The population menu function, which displays the population of the colony, the energy, and the energy production rate. It also gives the user the option to switch professions
+    public static void populationMenu () {
+	// Reset the cursor position
+	c.setCursor(6, 1);
+
+
+	// Display the population menu header, with the option to go back to the main menu and switch professions
+	displayHeader("Population Menu", "[Z] - Back | [S] - Switch Professions (costs " + switchCost + " GJ per person)");
+
+
+	// Displays several relevant values, such as the population of each profession, the total population, the population cap, the energy, the energy needed to switch workers, the energy production rate, and the time passed.
+	c.println("Population Menu\n");
+	for (int i = 0; i < 4; i++)
+	    c.println(professionNames[i] + ": " + peopleCounter[i]);
+	c.println("Total Population: " + (peopleCounter[0] + peopleCounter[1] + peopleCounter[2] + peopleCounter[3]));
+	c.println("Population cap: " + populationCaps[currentRegion]);
+	c.println("\nEnergy: " + resourceCounter[1] + " GJ");
+	c.println("Energy needed to switch workers: " + switchCost + "GJ"); // in case they didn't see the heading that says "costs x GJ per person"
+	c.println("Energy Production Rate: " + energyProductionRate + " GJ/s");
+	c.println("Time Passed: " + getRoundedDouble(secondsPast) + "s");
+	c.println("\n");
+
+
+	// If the user presses Z, they will go back to the main menu. If they press S, they will switch professions. The c.isCharAvail() function is used to determine if a key has been pressed, but without blocking the program execution.
+	if (c.isCharAvail()) {
+	    char pressed = c.getChar(); // INPUT section to detect the keypress
+
+
+	    // For each below case, we clear the console, play the menu switch sound effect, and progress to the menu that corresponds to the key pressed.
+	    if (pressed == 'z') {
+		// Clear the console, play the menu switch sound effect, and progress to the main menu
+		imageNotShown = true; // Note that we set imageNotShown to true, so that the background image is redrawn when we go back to the main menu
+		// Auditory OUTPUT section
+		playGameEffect("Assets/menuswitch.wav");
+		c.clear();
+		currentMenu = 3;
+	    } else if (pressed == 's') {
+		// PROCESSING Section for profession switching
+		if (resourceCounter[1] < switchCost)
+		    c.println("You do not have enough energy to switch professions.");
+		else {
+		    // Initialize local variables for the profession switcher.
+		    int switchFrom, switchTo, numSwitch;
+
+
+		    // Display the profession switcher header and prompt the user to enter the profession to switch from and to.
+		    c.println ("Profession Switcher");
+		    c.println ("Enter profession to switch from: [0] - Unemployed | [1] - Worker | [2] - Soldier | [3] - Doctor");
+		    switchFrom = inputNumber (0, 3);
+
+
+		    // Prompt the user to enter the profession to switch to, and calculate the number of people to switch.
+		    c.println ("Enter profession to switch to: [0] - Unemployed | [1] - Worker | [2] - Soldier | [3] - Doctor");
+		    switchTo = inputNumber (0, 3);
+
+
+		    // Prompt the user to enter the number of people to switch, and calculate the cost of switching.
+		    c.println ("Enter how many people to switch: ");
+
+
+		    /*
+		    At most, you can switch all your people, or you can switch until you have no energy left
+		    thus, we must use a min function to see which one we are constrained by either you are constrained by the total amount of people available to switch, i.e peopleCounter[switchFrom] or you are constrained by the amount of energy you have, i.e. resourceCounter[1] / switchCost
+		    amount of energy / cost of switching one person
+		    also, the cost of switching increases each time you switch by 50 GJ
+		    */
+
+
+		    // Calculate the number of people to switch, and increase the switch cost by 50 GJ per switch
+		    numSwitch = inputNumber (0, Math.min (peopleCounter [switchFrom], (int) (resourceCounter [1] / switchCost)));
+		    switchCost += 50; // increase by 50 GJ per switch
+
+
+		    // Perform the switch
+		    peopleCounter [switchFrom] -= numSwitch;
+		    peopleCounter [switchTo] += numSwitch;
+		    resourceCounter [1] -= switchCost * numSwitch;
+		   
+		    // Display the result of the switch and play the success sound effect
+		    // Auditory OUTPUT section
+		    playGameEffect("Assets/success.wav");
+		    // OUTPUT Section, displays the success message
+		    c.println("Successfully switched " + numSwitch + " " + professionNames[switchFrom] + " to " + professionNames[switchTo] + ". Press any key to continue");
+
+
+		    // Wait for the user to press a key before continuing
+		    c.getChar();
+		    c.clear(); // We clear the console after a profession switch
+		}
+	    }
+	}
+    } // end of populationMenu
+
+
+    // The region map function, which displays the current region, the population capacity, the next region, the reserves and soldiers needed to conquer it, and the option to conquer the next region
+    public static void regionMap () {
+	// Set the cursor position
+	c.setCursor (6, 1);
+
+
+	// Display the region map header, with the option to go back to the main menu and conquer the next region
+	displayHeader("Region Map", "[Z] - Back | [C] - Conquer Next Region");
+
+
+	// Initialize the canProgress variable
+	boolean canProgress;
+
+
+	// Display the region map information, including the current region, the population capacity, the next region, the reserves and soldiers needed to conquer it, and the option to conquer the next region
+	c.println("Current Region: " + regionNames [currentRegion]);
+	c.println("Population Capacity: " + populationCaps [currentRegion]);
+
+
+	// Check if the player has enough resources and people to progress to the next region
+	if (soldiersNeeded [currentRegion + 1] > peopleCounter[2] || reservesNeeded [currentRegion + 1] > resourceCounter[0] || currentRegion == regionNames.length - 1)
+	    canProgress = false;
+	else
+	    canProgress = true;
+	c.println();
+
+
+	// If there are still regions to conquer, display the next region, the reserves and soldiers needed to conquer it, and the option to conquer the next region. If there aren't more regions to conquer, display a message indicating that the player has beaten the game
+	if (currentRegion != regionNames.length - 1) {
+	    c.println("Next Region: " + regionNames [currentRegion + 1]);
+	    c.println("Reserves Needed: " + reservesNeeded [currentRegion + 1] + " MT");
+	    c.println("Soldiers Needed: " + soldiersNeeded [currentRegion + 1] + " soldiers\n");
+	    if (canProgress)
+		c.println("Press [C] to conquer the next region");
+	    else
+		c.println("You do not have enough resources/people to conquer the next region.");
+	} else
+	    c.println("There are no more regions to conquer. You have beaten the game!");
+       
+	// If the user presses Z, they will go back to the main menu. If they press C, they will conquer the next region. The c.isCharAvail() function is used to determine if a key has been pressed, but without blocking the program execution
+	// INPUT + PROCESSING Section
+	if (c.isCharAvail()) {
+	    char pressed = c.getChar(); // INPUT section to detect the keypress
+
+
+	    // PROCESSING Section to return to main menu
+	    if (pressed == 'z') {
+		// Clear the console, play the menu switch sound effect, and progress to the main menu
+		imageNotShown = true; // Note that we set imageNotShown to true, so that the background image is redrawn when we go back to the main menu
+		// Auditory OUTPUT section
+		playGameEffect("Assets/menuswitch.wav");
+		c.clear();
+		currentMenu = 3;
+	    }
+	   
+	    // If the user presses C, they will conquer the next region, and the game will check if the player has enough resources and people to progress to the next region
+	    // PROCESSING Section to conquer the next region
+	    else if (pressed == 'c' && canProgress) {
+		// Increment the current region by 1
+		++currentRegion;
+
+
+		// Random events for conquering regions
+		if (Math.random () < 0.10) {
+		    // 10% chance for the alien forces to be caught off guard
+		    double reductionFactor = 0.9 - Math.random () * 0.4;
+
+
+		    // Display the "not as dangerous" message
+		    // OUTPUT Section, notfies users of the result
+		    slowPrint("The region was not as dangerous as your scientists predicted. All costs are reduced.\n");
+
+
+		    // Reduce the resources and professions
+		    resourceCounter[0] -= reservesNeeded[currentRegion] * reductionFactor;
+		    peopleCounter[2] -= soldiersNeeded[currentRegion] * reductionFactor;
+		} else if (Math.random () < 0.15) {
+		    // 15% chance for the alien forces to be underestimated
+		    double increaseFactor = 1.1 + Math.random () * 0.4;
+
+
+		    // Display the underestimated message
+		    // OUTPUT Section, notfies users of the result
+		    slowPrint("The harsh conditions were underestimated and your ships have difficulty operating. All costs are increased.\n");
+
+
+		    // Decrease the resources and professions
+		    resourceCounter[0] -= reservesNeeded[currentRegion] * increaseFactor;
+		    peopleCounter[2] -= soldiersNeeded[currentRegion] * increaseFactor;
+		} else {
+		    // Normal conquering
+		    resourceCounter[0] -= reservesNeeded[currentRegion];
+		    peopleCounter[2] -= soldiersNeeded[currentRegion];
+		}
+
+
+		// Ask the user to press any key to continue
+		c.print("Press any key to continue.");
+		c.getChar();
+	       
+		// The user has been defeated if the region was underestimated, and the user cannot satisfy the increased resources
+		if (resourceCounter[0] < 0 || peopleCounter[2] < 0) {
+		    // Reduce the resources and professions if the player loses
+		    double reductionFactor = 0.4 + Math.random () * 0.4;
+		    resourceCounter[0] = 0;
+		    resourceCounter[1] = 0;
+		    peopleCounter[0] = 0;
+		    peopleCounter[1] *= reductionFactor;
+		    peopleCounter[2] = 0;
+		    peopleCounter[3] *= reductionFactor;
+
+
+		    // Display the failed conquest
+		    c.clear();
+		    slowPrint(failedConquerMessages[currentRegion] + "\n\n");
+		    sleep(1000); // Pause for 1 second
+
+
+		    // Notify the user that they have suffered a crushing defeat
+		    // OUTPUT Section, notfies users of the result
+		    slowPrint("You did not have enough soldiers or resources and your fleet is heavily damaged. You suffer a crushing defeat.");
+
+
+		    // Tell the user to press any key to continue
+		    c.print("Press any key to continue.");
+		    c.getChar();
+		    c.clear();
+
+
+		    // Decrement currentRegion, since it was incremented earlier
+		    --currentRegion;
+		} else {
+		    // Display the successful conquest
+		    c.clear();
+		    slowPrint(successfullConquerMessages[currentRegion] + "\n\n");
+		    sleep(1000); // Pause for 1 second
+
+
+		    // Notify the user that they have successfully conquered the region, and play the success sound effect
+		    // Auditory OUTPUT section
+		    playGameEffect("Assets/success.wav");
+		    // OUTPUT Section, notfies users of the result
+		    slowPrint("You have successfully conquered " + regionNames [currentRegion] + "!\n");
+
+
+		    // Tell the user to press any key to continue
+		    c.print("Press any key to continue.");
+		    c.getChar();
+		    c.clear();
+		}
+	    }
+	}
+    } // End of regionMap function
+
+
+    // The view mines function, which displays the mine tier, the regional multiplier, the collection cooldown, the resources needed for the next tier, the resources and energy needed to upgrade the mines, the resources and energy available, and the time until the next collection
+    public static void viewMines() {
+	// Increment the iterations since the last collect
+	++iterationsSinceLastCollect;
+
+
+	// Set the cursor position and display the view mines header
+	c.setCursor(6, 1);
+	displayHeader("Stellar Reserve Mines", "[Z] - Back | [C] - Collect Mines | [U] - Upgrade Mines");
+
+
+	// Display a description of the mines
+	c.println("Your workers are hard at work mining stellar reserves and producing energy in our top notch mines. You can collect from mines every few seconds, but only when you are on this screen. This cooldown can be reduced by upgrading your mine. Each time you collect, there is a 20% chance of double resources, and a 10% chance of triple resources. If you're lucky, these two may stack!\n");
+
+
+	// Display the mine tier, the regional multiplier, the collection cooldown, the resources needed for the next tier, the resources and energy needed to upgrade the mines, the resources and energy available, and the time until the next collection
+	c.print("Mine Tier ");
+
+
+	// Display the mine tier and region name, if the mine level is 10, display that the mines are maxed out
+	if (mineLevel == 10)
+	    c.print("[MAXED OUT]");
+
+
+	// Displays the rest of the info
+	c.print(": ");
+	c.println(mineTierNames[mineLevel] + " - [" + regionNames[currentRegion] + "]");
+	c.println("Regional Multiplier: " + regionMineMultipliers[currentRegion] + "x");
+	c.println("Collection Cooldown: " + getRoundedDouble(mineCollectionTimes[mineLevel]/10.0) + " seconds\n");
+
+
+	// Tell the user their mine is maxed out if the mine level is 10, otherwise display the resources needed for the next tier and the energy needed for the next tier. Tells the user if they can upgrade the mines or not
+	if (mineLevel != 10) {
+	    c.println("Reserves Needed For Next Tier: " + mineUpdateReservesNeeded[mineLevel + 1] + " MT");
+	    c.println("Energy Needed For Next Tier: " + mineUpdateEnergyNeeded[mineLevel + 1] + " GJ");
+	    if (resourceCounter[0] >= mineUpdateReservesNeeded[mineLevel + 1] && resourceCounter[1] >= mineUpdateEnergyNeeded[mineLevel + 1] && mineLevel < 10)
+		c.println("You can upgrade your mines! Press [U] to upgrade.");
+	    else
+	       c.println("You do not have enough resources to upgrade your mines.");
+	} else
+	    c.println("Mines are maxed out and cannot be upgraded.");
+
+
+	// Display the resources and energy available
+	c.println("\nStellar Reserves: " + resourceCounter[0] + " MT");
+	c.println("Energy: " + resourceCounter[1] + " GJ\n");
+
+
+	// Display the time until the next collection, and if a user can collect, display a message indicating that they can collect now. If they cannot collect, display a message indicating the time until the next collection
+	if (iterationsSinceLastCollect >= mineCollectionTimes[mineLevel])
+	    c.println("You can collect now! Press [C] to collect from your mines.");
+	else    
+	    c.println("You can collect from mines in " + getRoundedDouble((mineCollectionTimes[mineLevel]-(double)iterationsSinceLastCollect)/10.0) + " seconds.");
+
+
+	// If the user presses Z, they will go back to the main menu. If they press C, they will collect from the mines. If they press U, they will upgrade the mines. The c.isCharAvail() function is used to determine if a key has been pressed, but without blocking the program execution
+	// INPUT + PROCESSING Section
+	if (c.isCharAvail()) {
+	    char pressed = c.getChar(); // INPUT section to detect the keypress
+
+
+	    // PROCESSING Section to return to main menu
+	    if (pressed == 'z') {
+		// Clear the console, play the menu switch sound effect, and progress to the main menu
+		imageNotShown = true; // Note that we set imageNotShown to true, so that the background image is redrawn when we go back to the main menu
+		// Auditory OUTPUT section
+		playGameEffect("Assets/menuswitch.wav");
+		c.clear();
+		currentMenu = 3;
+	    }
+	   
+	    // If the user presses C, the game will check if the user can collect from the mines. If they can, the game will increment the resources by their respective values
+	    // PROCESSING Section to collect from mines
+	    else if (pressed == 'c' && iterationsSinceLastCollect >= mineCollectionTimes[mineLevel]) {
+		// Play the mine sound effect, auditory OUTPUT section
+		playGameEffect("Assets/mine.wav");
+
+
+		// Reset the iterations since the last collect
+		iterationsSinceLastCollect = 0;
+
+
+		// Add some randomness to the resources collected by introducing multipliers
+		int randomMultiplier = 1;
+		if (Math.random() < 0.2)
+		    randomMultiplier *= 2;
+		if (Math.random() < 0.1)
+		    randomMultiplier *= 3;
+
+
+		// Increment the resources by their respective values
+		resourceCounter[0] += 3 + (int) developerMultiplier * // Developer multiplier
+						randomMultiplier * // Random multiplier
+						regionMineMultipliers[currentRegion] * // Regional multiplier
+						(int) (reservesNeeded[currentRegion + 1] *
+						(Math.random() + 1.5) / 100);
+
+
+		resourceCounter[1] += 2 + (int) developerMultiplier * // Developer multiplier
+						randomMultiplier * // Random multiplier
+						regionMineMultipliers[currentRegion] * // Regional multiplier
+						(int) (resourceCounter[1] *
+						(Math.random() + 0.5) / 100);
+	    }
+	   
+	    // If the user presses U, they will upgrade the mines, and the game will check if the user can upgrade the mines using several conditions
+	    // PROCESSING Section to upgrade mines
+	    else if (pressed == 'u' && resourceCounter[0] >= mineUpdateReservesNeeded[mineLevel + 1] && resourceCounter[1] >= mineUpdateEnergyNeeded[mineLevel + 1] && mineLevel < 10) {
+		// Play the upgrade sound effect and decrement resources
+		resourceCounter[0] -= mineUpdateReservesNeeded[mineLevel + 1];
+		resourceCounter[1] -= mineUpdateEnergyNeeded[mineLevel + 1];
+		// Auditory OUTPUT section
+		playGameEffect("Assets/success.wav");
+
+
+		// Display the result of the upgrade and increment the mine level
+		// OUTPUT Section, displays the success message
+		c.print("You have successfully upgraded your mines to tier " + mineTierNames[mineLevel + 1] + "! Press any key to continue.");
+
+
+		// Wait for the user to press a key before continuing
+		c.getChar();
+		c.clear();
+
+
+		// Increment the mine level
+		++mineLevel;
+	    }
+	}
+    } // end of viewMines
+
+
+    /*
+    Tick functions
+    Ticks are called periodically and they update the game
+    Short ticks happen every 0.1s
+    Long ticks happen every 10s
+    */
+
+
+    // The short tick function, which updates the stellar reserves production rate, the energy production rate, and the population growth rate every 0.1s
+    // PROCESSING method
+    public static void shortTick () {
+	stellarReservesProductionRate = peopleCounter[1] * 0.1 + 0.1; // workers * 0.1 = rate
+	energyProductionRate = peopleCounter[1] * 5; // workers * 5 = GJ/s
+	populationGrowthRate = peopleCounter[3] * 0.1 + 0.1; // base rate of 0.1 plus 0.1 for every doctor
+    } // end of shortTick
+
+
+    // The long tick function, which updates the resources every 10s, and checks if the user has exceeded the population cap
+    // PROCESSING method
+    public static void longTick () {
+	int finalPopulation;
+
+
+	// Update the resources and population, the developer multiplier is used to speed up the game for developers in developer mode.
+	resourceCounter[0] += developerMultiplier * stellarReservesProductionRate * 10; // Add the stellar reserves production rate to the reserves, we multiply by 10 because this happens every 10 seconds
+	peopleCounter[0] += developerMultiplier * populationGrowthRate * 10; // Add the population growth rate to the unemployed population, we multiply by 10 because this happens every 10 seconds
+	resourceCounter[1] += developerMultiplier * energyProductionRate * 10; // Add the energy production rate to the energy, we multiply by 10 because this happens every 10 seconds
+	finalPopulation = peopleCounter[0] + peopleCounter[1] + peopleCounter[2] + peopleCounter[3]; // Calculate the total population
+
+
+	// If the population exceeds the population cap, adjust the population to the population cap
+	if (finalPopulation > populationCaps [currentRegion]) {
+	    peopleCounter[0] -= finalPopulation - populationCaps [currentRegion]; // adjust to population cap
+	}
+    } // end of longTick
+
+
+    // The main function, which initializes the game, displays the appropriate menu, and runs the game loop
+    public static void main (String[] args) {
+	// Immediately play the background music
+	// Auditory OUTPUT section
+	playBackgroundMusic();
+
+
+	// Initialize the console, it has a width of 115 and a height of 29, and the title is "Starbound Empires"
+	c = new Console(29, 115, 18, "Starbound Empires"); // Initialize the console
+
+
+	// Initialize the game
+	initializeGame();
+
+
+	// Keeping the main thread alive to keep the application running, this is our main game loop, with all the elements of the game
+	while (true) {
+	    shortTick(); // A short tick is called every frame
+
+
+	    if (iterations % 100 == 0)
+		longTick(); // every 100 frames, i.e 10s, a long tick is called
+
+
+	    // Display the appropriate menu with event handling
+	    // PROCESSING Section to display the appropriate menu
+	    if (currentMenu == 0)
+		startMenu();
+	    else if (currentMenu == 1)
+		nameMenu();
+	    else if (currentMenu == 2)
+		rulesMenu();
+	    else if (currentMenu == 3)
+		mainMenu();
+	    else if (currentMenu == 4)
+		populationMenu();
+	    else if (currentMenu == 5)
+		regionMap();
+	    else if (currentMenu == 6)
+		viewMines();
+
+
+	    // Sleep for 80ms to keep the game running at a reasonable speed, unless in debug mode
+	    if (!debug)
+		sleep(80);
+
+
+	    // Update the time passed and the iterations
+	    secondsPast += 0.1;
+	    iterations++;
+	} // end of while loop
+    } // end of main
+} // end of class
