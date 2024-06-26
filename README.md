@@ -41,11 +41,7 @@ This project uses the HSA.Console library, originally designed for the Ready to 
 
 3. Remember to have the hsa folder in the same directory as your running file. Check the link above for more help.
 
-4. Run the main program file to start playing Exoplanet Empire.
-
-## Contributing
-
-Contributions are welcome! If you have suggestions or improvements, feel free to open an issue or submit a pull request.
+4. Run the main program file to start playing Starbound Empires.
 
 ## License
 
