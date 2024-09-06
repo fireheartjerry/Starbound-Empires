@@ -48,3 +48,5 @@ This project uses the HSA.Console library, originally designed for the Ready to 
 ## License
 
 This project is licensed under the MIT License. See the [LICENSE](LICENSE) file for more details.
+
+*Note that some assets are not included due to their large size*
